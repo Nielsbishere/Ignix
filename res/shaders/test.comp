@@ -1,0 +1,21 @@
+#version 450
+
+layout(binding=0, rgba16f) uniform image2D test;
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+float rand(vec2 c){
+	return fract(sin(dot(c.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
+void main() {
+
+	ivec2 size = imageSize(test);
+	uvec3 loc = gl_GlobalInvocationID;
+
+	vec2 normalized = vec2(loc.xy) / vec2(size);
+
+	vec3 colored = vec3(rand(normalized * 10), rand(normalized * 3232 + 3393), rand(normalized * 39490 + 38394));
+
+	imageStore(test, ivec2(loc.xy), vec4(colored, 1));
+}
