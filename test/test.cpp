@@ -228,7 +228,7 @@ struct TestViewportInterface : public ViewportInterface {
 			
 			//Clear and bind MSAA
 
-			SetClearColor(Vec4f { 0.586f, 0.129f, 0.949f, 1.0f }),
+			SetClearColor(Vec4f{ 0.586f, 0.129f, 0.949f, 1.0f }),
 			BeginFramebuffer(intermediate),
 
 			//TODO: BeginRenderPass instead of BeginFramebuffer
@@ -245,7 +245,7 @@ struct TestViewportInterface : public ViewportInterface {
 			EndFramebuffer()
 		);
 
-		//Pre-render and store rendered result.
+		//Release the graphics instance for us until we need it again
 
 		g.pause();
 	}
@@ -284,7 +284,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 		//Copy pre-rendered result to viewports
 
-		g.present(intermediate, swapchain, cl.get());
+		g.present(intermediate, swapchain, cl);
 	}
 
 };

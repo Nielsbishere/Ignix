@@ -43,12 +43,12 @@ namespace igx {
 		}
 
 		GraphicsObjectRef(const GraphicsObjectRef &other) {
-			if((ptr = other.ptr))
+			if((ptr = other.ptr) != nullptr)
 				ptr->addRef();
 		}
 
 		GraphicsObjectRef(GraphicsObjectRef &&other) {
-			if((ptr = other.ptr))
+			if((ptr = other.ptr) != nullptr)
 				ptr->addRef();
 		}
 
@@ -56,14 +56,14 @@ namespace igx {
 
 			release();
 
-			if((ptr = other.ptr))
+			if((ptr = other.ptr) != nullptr)
 				ptr->addRef();
 
 			return *this;
 		}
 
 		//Maintain equal references (the other one
-		GraphicsObjectRef &operator=(GraphicsObjectRef &&other) {
+		GraphicsObjectRef &operator=(GraphicsObjectRef &&other) noexcept {
 
 			release();
 

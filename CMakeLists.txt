@@ -12,7 +12,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 file(GLOB_RECURSE ignixHpp "include/*.hpp")
 file(GLOB_RECURSE ignixCpp "src/*.cpp")
 
-add_subdirectory(Ignis)
+add_subdirectory(ignis)
+add_subdirectory(igxi)
 
 # Setup test data
 
@@ -34,7 +35,7 @@ set_property(TARGET ignix PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE
 target_include_directories(ignix PRIVATE include)
 target_include_directories(ignix PRIVATE Ignis/include)
 target_include_directories(ignix PRIVATE Ignis/core2/include)
-target_link_libraries(ignix PRIVATE ignis ocore)
+target_link_libraries(ignix PRIVATE ignis ocore igxi)
 
 source_group("Headers" FILES ${ignisHpp})
 source_group("Source" FILES ${ignisCpp})

@@ -1,3 +1,6 @@
-[submodule "Ignis"]
-	path = Ignis
-	url = https://github.com/Nielsbishere/Ignis
+[submodule "ignis"]
+	path = ignis
+	url = https://github.com/Nielsbishere/ignis
+[submodule "igxi"]
+	path = igxi
+	url = https://github.com/Nielsbishere/igxi
