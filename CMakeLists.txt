@@ -12,6 +12,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 file(GLOB_RECURSE ignixHpp "include/*.hpp")
 file(GLOB_RECURSE ignixCpp "src/*.cpp")
 
+file(GLOB_RECURSE depsHpp "third_party/include/*.hpp")
+file(GLOB_RECURSE depsCpp "third_party/src/*.cpp")
+
 add_subdirectory(ignis)
 add_subdirectory(igxi)
 
@@ -25,6 +28,8 @@ add_executable(
 	ignix
 	${ignixHpp}
 	${ignixCpp}
+	${depsHpp}
+	${depsCpp}
 	${shaders}
 	CMakeLists.txt
 	test/test.cpp
@@ -33,12 +38,15 @@ add_executable(
 set_property(TARGET ignix PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res")
 
 target_include_directories(ignix PRIVATE include)
+target_include_directories(ignix PRIVATE third_party/include)
 target_include_directories(ignix PRIVATE Ignis/include)
 target_include_directories(ignix PRIVATE Ignis/core2/include)
 target_link_libraries(ignix PRIVATE ignis ocore igxi)
 
 source_group("Headers" FILES ${ignisHpp})
 source_group("Source" FILES ${ignisCpp})
+source_group("Deps headers" FILES ${depsHpp})
+source_group("Deps source" FILES ${depsCpp})
 source_group("Shaders" FILES ${shaders})
 
 if(MSVC)

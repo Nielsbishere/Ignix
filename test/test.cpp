@@ -291,7 +291,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 //Create window and wait for exit
 
-int main() {
+int notmain() {
 
 	Graphics g;
 	TestViewportInterface viewportInterface(g);
