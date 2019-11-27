@@ -207,7 +207,7 @@ struct NKViewportInterface : public ViewportInterface {
 		static int i =  20;
 
 		if (nk_begin(ctx, "Show", nk_rect(50, 50, 220, 220),
-					 NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
+					 NK_WINDOW_BORDER|NK_WINDOW_SCALABLE|NK_WINDOW_TITLE|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
 			// fixed widget pixel width
 			nk_layout_row_static(ctx, 30, 80, 1);
 			if (nk_button_label(ctx, "Button")) {
@@ -285,8 +285,6 @@ struct NKViewportInterface : public ViewportInterface {
 			)
 		};
 
-		const struct nk_draw_command *cmd = 0;
-
 		commands->clear();
 		commands->add(
 			BindPipeline(pipeline),
@@ -297,6 +295,10 @@ struct NKViewportInterface : public ViewportInterface {
 			BindDescriptors(descriptors)
 		);
 
+
+		const nk_draw_command *cmd{};
+		nk_draw_index offset{};
+
 		nk_draw_foreach(cmd, ctx, &cmds) {
 
 			if (!cmd->elem_count) continue;
@@ -306,9 +308,10 @@ struct NKViewportInterface : public ViewportInterface {
 
 			commands->add(
 				r.w == 16384 ? SetScissor() : SetScissor({ u32(r.w), u32(r.h) }, { i32(r.x), i32(r.y) }),
-				DrawInstanced::indexed(cmd->elem_count)
+				DrawInstanced::indexed(cmd->elem_count, 1, offset)
 			);
 
+			offset += u16(cmd->elem_count);
 		}
 
 		commands->add(
