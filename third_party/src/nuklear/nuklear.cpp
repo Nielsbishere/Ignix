@@ -7,6 +7,7 @@
 #include "system/allocator.hpp"
 #include "helpers/graphics_object_ref.hpp"
 #include "utils/hash.hpp"
+#include "system/local_file_system.hpp"
 
 //A test to see how easy NK is to work with
 
@@ -17,15 +18,9 @@ using namespace igx;
 
 HashMap<void*, usz> sizes;
 
-void *nkAlloc(nk_handle, void *old, nk_size count) {
-
+void *nkAlloc(nk_handle, void*, nk_size count) {
 	u8 *allocation = oic::System::allocator()->allocArray(count);
-
 	sizes[allocation] = count;
-
-	if(old)
-		memcpy(allocation, old, count);
-
 	return allocation;
 }
 
@@ -52,10 +47,28 @@ struct NKViewportInterface : public ViewportInterface {
 
 	Graphics &g;
 
+	GPUBuffer ibo, vbo;
 	Texture textureAtlas;
-	Texture nullTexture;
+	PrimitiveBuffer primitiveBuffer;
+	CommandList commands;
+	Sampler sampler;
 
+	GPUBuffer res;
 	Swapchain swapchain;
+	Pipeline pipeline;
+	Framebuffer target;
+	Descriptors descriptors;
+
+	//Constants
+
+	BufferAttributes vertexLayout = { GPUFormat::RG32f, GPUFormat::RG32f, GPUFormat::RGBA8 };
+
+	PipelineLayout pipelineLayout = {
+		RegisterLayout(NAME("Pipeline layout"), 0, SamplerType::SAMPLER_2D, 0, ShaderAccess::FRAGMENT),
+		RegisterLayout(NAME("Res buffer"), 1, GPUBufferType::UNIFORM, 0, ShaderAccess::VERTEX, 8 /* res buffer size */)
+	};
+
+	u32 msaa = 8;
 
 	//nk init data
 
@@ -75,21 +88,44 @@ struct NKViewportInterface : public ViewportInterface {
 		ctx = oic::System::allocator()->alloc<nk_context>();
 		commandList.resize(MAX_MEMORY);
 
+		commands = {
+			g, NAME("Command list"),
+			CommandList::Info(1_MiB)
+		};
+
+		res = {
+			g, NAME("Resolution buffer"),
+			GPUBuffer::Info(8, GPUBufferType::UNIFORM, GPUMemoryUsage::CPU_WRITE)
+		};
+
 		allocator.alloc = &nkAlloc;
 		allocator.free = (nk_plugin_free)&nkFree;
 
 		//Null texture (white)
 
-		u8 nullData[1][1] = { { 0xFF } };
+		Buffer vertShader, fragShader;
+		oicAssert(oic::System::files()->read("./shaders/pass_through.vert.spv", vertShader), "Couldn't find pass through vertex shader");
+		oicAssert(oic::System::files()->read("./shaders/pass_through.frag.spv", fragShader), "Couldn't find pass through fragment shader");
 
-		nullTexture = {
-			g, NAME("Test texture"),
-			Texture::Info(
-				List<Grid2D<u8>>{
-					{ nullData }
+		pipeline = {
+			g, NAME("Test pipeline"),
+			Pipeline::Info(
+				PipelineFlag::OPTIMIZE,
+				{ vertexLayout },
+				{
+					{ ShaderStage::VERTEX, vertShader },
+					{ ShaderStage::FRAGMENT, fragShader }
 				},
-				GPUFormat::R8, GPUMemoryUsage::LOCAL, 1
+				pipelineLayout,
+				PipelineMSAA(msaa, .2f),
+				Rasterizer(),
+				BlendState::alphaBlend()
 			)
+		};
+
+		sampler = {
+			g, NAME("Test sampler"),
+			Sampler::Info()
 		};
 
 		//Init font and nk
@@ -100,11 +136,6 @@ struct NKViewportInterface : public ViewportInterface {
 		nk_font_atlas_begin(&atlas);
 
 		font = nk_font_atlas_add_default(&atlas, 16 /* TODO */, nullptr);
-
-		atlasTexture = {
-			nk_handle_ptr(nullTexture.get()),
-			{ 0.5f, 0.5f }
-		};
 
 		int width{}, height{};
 		u8 *data = (u8*) nk_font_atlas_bake(&atlas, &width, &height, NK_FONT_ATLAS_ALPHA8);
@@ -119,9 +150,24 @@ struct NKViewportInterface : public ViewportInterface {
 			g, NAME("Atlas texture"), info
 		};
 
+
+		DescriptorsSubresources resources;
+		resources[0] = { sampler, textureAtlas };
+		resources[1] = { res, 0 };
+
+		descriptors = {
+			g, NAME("Atlas descriptor"),
+			Descriptors::Info(pipelineLayout, resources)
+		};
+
 		nk_font_atlas_end(&atlas, nk_handle_ptr(textureAtlas.get()), &atlasTexture);
 
 		nk_init_fixed(ctx, commandList.data(), MAX_MEMORY, &font->handle);
+
+		target = {
+			g, NAME("Framebuffer output"),
+			Framebuffer::Info({ GPUFormat::RGBA8 }, DepthFormat::NONE, false, msaa)
+		};
 
 		g.pause();
 	}
@@ -135,7 +181,12 @@ struct NKViewportInterface : public ViewportInterface {
 	}
 
 	void resize(const ViewportInfo *, const Vec2u &size) final override {
+
 		swapchain->onResize(size);
+		target->onResize(size);
+
+		memcpy(res->getBuffer(), size.data(), sizeof(size));
+		res->flush(0, 8);
 	}
 
 	void release(const ViewportInfo*) final override { }
@@ -179,44 +230,96 @@ struct NKViewportInterface : public ViewportInterface {
 		}
 		nk_end(ctx);
 
-		//Convert to ignis draw commands
+		//TODO: Allow high level commands; like line, curve, image, etc.
 
-		const struct nk_command *cmd = 0;
-		nk_foreach(cmd, ctx) {
+		//Convert to draw data
 
-			int debug = 0;
-			debug;
+		static const struct nk_draw_vertex_layout_element vertLayout[] = {
+			{ NK_VERTEX_POSITION, NK_FORMAT_FLOAT,  vertexLayout[0].offset },
+			{ NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, vertexLayout[1].offset },
+			{ NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, vertexLayout[2].offset },
+			{ NK_VERTEX_LAYOUT_END }
+		};
 
-				//NK_COMMAND_NOP,
-				//NK_COMMAND_SCISSOR,
-				//NK_COMMAND_LINE,
-				//NK_COMMAND_CURVE,
-				//NK_COMMAND_RECT,
-				//NK_COMMAND_RECT_FILLED,
-				//NK_COMMAND_RECT_MULTI_COLOR,
-				//NK_COMMAND_CIRCLE,
-				//NK_COMMAND_CIRCLE_FILLED,
-				//NK_COMMAND_ARC,
-				//NK_COMMAND_ARC_FILLED,
-				//NK_COMMAND_TRIANGLE,
-				//NK_COMMAND_TRIANGLE_FILLED,
-				//NK_COMMAND_POLYGON,
-				//NK_COMMAND_POLYGON_FILLED,
-				//NK_COMMAND_POLYLINE,
-				//NK_COMMAND_TEXT,
-				//NK_COMMAND_IMAGE,
-				//NK_COMMAND_CUSTOM
+		struct nk_convert_config cfg = {};
+		cfg.shape_AA = NK_ANTI_ALIASING_ON;
+		cfg.line_AA = NK_ANTI_ALIASING_ON;
+		cfg.vertex_layout = vertLayout;
+		cfg.vertex_size = vertexLayout.getStride();
+		cfg.vertex_alignment = 4 /* Detect? */;
+		cfg.circle_segment_count = 22;
+		cfg.curve_segment_count = 22;
+		cfg.arc_segment_count = 22;
+		cfg.global_alpha = 1.0f;
+		cfg.null = atlasTexture;
 
-				/*case NK_COMMAND_LINE:
-					your_draw_line_function(...);
-					break;
+		nk_buffer cmds, verts, idx;
 
-				case NK_COMMAND_RECT
-					your_draw_rect_function(...);
-					break;*/
+		nk_buffer_init(&cmds, &allocator, NK_BUFFER_DEFAULT_INITIAL_SIZE);
+		nk_buffer_init(&verts, &allocator, NK_BUFFER_DEFAULT_INITIAL_SIZE);
+		nk_buffer_init(&idx, &allocator, NK_BUFFER_DEFAULT_INITIAL_SIZE);
+		nk_convert(ctx, &cmds, &verts, &idx, &cfg);
+
+		vbo.release();
+		ibo.release();
+		primitiveBuffer.release();
+
+		auto vboStart = (u8*)verts.memory.ptr;
+		auto iboStart = (u8*)idx.memory.ptr;
+
+		vbo = {
+			g, NAME("NK VBO"),
+			GPUBuffer::Info(Buffer(vboStart, vboStart + verts.needed), GPUBufferType::VERTEX, GPUMemoryUsage::LOCAL)
+		};
+
+		ibo = {
+			g, NAME("NK IBO"),
+			GPUBuffer::Info(Buffer(iboStart, iboStart + idx.needed), GPUBufferType::INDEX, GPUMemoryUsage::LOCAL)
+		};
+
+		primitiveBuffer = {
+			g, NAME("Primitive buffer"),
+			PrimitiveBuffer::Info(
+				BufferLayout(vbo, vertexLayout),
+				BufferLayout(ibo, BufferAttributes(GPUFormat::R16u))
+			)
+		};
+
+		const struct nk_draw_command *cmd = 0;
+
+		commands->clear();
+		commands->add(
+			BindPipeline(pipeline),
+			SetClearColor(Vec4f{ 0, 0.5, 1, 1}),
+			BeginFramebuffer(target),
+			SetViewport(),
+			BindPrimitiveBuffer(primitiveBuffer),
+			BindDescriptors(descriptors)
+		);
+
+		nk_draw_foreach(cmd, ctx, &cmds) {
+
+			if (!cmd->elem_count) continue;
+
+			Texture t = Texture::Ptr(cmd->texture.ptr);
+			auto r = cmd->clip_rect;
+
+			commands->add(
+				r.w == 16384 ? SetScissor() : SetScissor({ u32(r.w), u32(r.h) }, { i32(r.x), i32(r.y) }),
+				DrawInstanced::indexed(cmd->elem_count)
+			);
+
 		}
 
-		g.present(nullptr, swapchain);
+		commands->add(
+			EndFramebuffer()
+		);
+
+		nk_buffer_free(&cmds);
+		nk_buffer_free(&verts);
+		nk_buffer_free(&idx);
+
+		g.present(target, swapchain, commands);
 
 		//Reset
 

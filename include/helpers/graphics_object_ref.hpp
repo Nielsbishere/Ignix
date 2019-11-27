@@ -30,6 +30,7 @@ namespace igx {
 	public:
 
 		using Info = typename T::Info;
+		using Ptr = T*;
 
 		void release() {
 			if (ptr) {
@@ -38,9 +39,14 @@ namespace igx {
 			}
 		}
 
-		GraphicsObjectRef() {}
+		GraphicsObjectRef() { static_assert(std::is_base_of_v<ignis::GraphicsObject, T>, "GraphicsObjectRef can only be used on GraphicsObjects");  }
 		~GraphicsObjectRef() {
 			release();
+		}
+
+		GraphicsObjectRef(Ptr ptr): ptr(ptr) {
+			if(ptr)
+				ptr->addRef();
 		}
 
 		GraphicsObjectRef(const GraphicsObjectRef &other) {
@@ -49,8 +55,8 @@ namespace igx {
 		}
 
 		GraphicsObjectRef(GraphicsObjectRef &&other) {
-			if((ptr = other.ptr) != nullptr)
-				ptr->addRef();
+			ptr = other.ptr;
+			other.ptr = nullptr;
 		}
 
 		GraphicsObjectRef &operator=(const GraphicsObjectRef &other) {
@@ -65,12 +71,8 @@ namespace igx {
 
 		//Maintain equal references (the other one
 		GraphicsObjectRef &operator=(GraphicsObjectRef &&other) noexcept {
-
-			release();
-
-			if ((ptr = other.ptr) != nullptr)
-				ptr->addRef();
-
+			ptr = other.ptr;
+			other.ptr = nullptr;
 			return *this;
 		}
 
@@ -80,7 +82,7 @@ namespace igx {
 		inline operator T*() const { return ptr; }
 		inline operator T*() { return ptr; }
 
-		//Creates a graphics object if it can't find it
+		//Creates a graphics object
 		GraphicsObjectRef(
 			ignis::Graphics &g, const String &name, const Info &info
 		) {
@@ -89,19 +91,11 @@ namespace igx {
 
 			auto it = g.find(name);
 
-			if (it != g.end()) {
-
-				if ((ptr = dynamic_cast<T*>(it->second)) != nullptr)
-					oic::System::log()->fatal(
-						"The requested type existed but had a different type"
-					);
-
-				ptr->addRef();
-			}
+			oicAssert(it == g.end(), "The requested resource already exists");
 
 			//Try and create resource (nullptr if it fails)
 			
-			else try {
+			try {
 				ptr = new T(g, name, info);
 			} catch (std::runtime_error err) { }
 		}
@@ -150,8 +144,12 @@ namespace igx {
 	using ShaderBufferLayout = ignis::ShaderBuffer::Layout;
 	using BufferLayout = ignis::BufferLayout;
 	using PipelineLayout = ignis::PipelineLayout;
+	using DescriptorsSubresources = ignis::Descriptors::Subresources;
 	using RegisterLayout = ignis::RegisterLayout;
 	using GPUSubresource = ignis::GPUSubresource;
+	using Rasterizer = ignis::Pipeline::Rasterizer;
+	using BlendState = ignis::Pipeline::BlendState;
+	using PipelineMSAA = ignis::Pipeline::MSAA;
 
 	using GPUFormat = ignis::GPUFormat;
 	using DepthFormat = ignis::DepthFormat;
@@ -162,6 +160,23 @@ namespace igx {
 	using ShaderStage = ignis::ShaderStage;
 	using GPUMemoryUsage = ignis::GPUMemoryUsage;
 	using PipelineFlag = ignis::Pipeline::Flag;
-	using MSAAInfo = ignis::Pipeline::MSAA;
+	using TopologyMode = ignis::TopologyMode;
+	using FillMode = ignis::FillMode;
+	using CullMode = ignis::CullMode;
+	using WindMode = ignis::WindMode;
+	using BlendLogicOp = ignis::Pipeline::BlendState::LogicOp;
+
+}
+
+namespace std {
+
+	template<typename T>
+	struct hash<igx::GraphicsObjectRef<T>> {
+
+		inline usz operator()(const igx::GraphicsObjectRef<T> &t) const {
+			return usz(t.get());
+		}
+
+	};
 
 }

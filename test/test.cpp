@@ -176,7 +176,7 @@ struct TestViewportInterface : public ViewportInterface {
 		};
 
 		descriptorsInfo = Descriptors::Info(pipelineLayout, {});
-		descriptorsInfo.resources[0] = GPUSubresource(uniforms);
+		descriptorsInfo.resources[0] = GPUSubresource(uniforms, 0);
 
 		descriptorsInfo.resources[1] = GPUSubresource(
 			samp, computeOutput, TextureType::TEXTURE_2D
@@ -204,11 +204,10 @@ struct TestViewportInterface : public ViewportInterface {
 				},
 
 				pipelineLayout,
-				MSAAInfo(intermediate->getInfo().samples)
+				PipelineMSAA(intermediate->getInfo().samples, .2f)
 
 				//TODO:
 				//DepthStencil()
-				//BlendState()
 				//RenderPass
 				//Parent pipeline / allow parenting (optional)
 			)
@@ -230,6 +229,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 			SetClearColor(Vec4f{ 0.586f, 0.129f, 0.949f, 1.0f }),
 			BeginFramebuffer(intermediate),
+			SetViewportAndScissor(),
 
 			//TODO: BeginRenderPass instead of BeginFramebuffer
 
