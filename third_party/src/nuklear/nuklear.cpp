@@ -69,6 +69,7 @@ struct NKViewportInterface : public ViewportInterface {
 	};
 
 	u32 msaa = 8;
+	bool refresh{};
 
 	//nk init data
 
@@ -78,6 +79,7 @@ struct NKViewportInterface : public ViewportInterface {
 	nk_allocator allocator{};
 
 	nk_draw_null_texture atlasTexture;
+	Buffer previous;
 
 	//
 
@@ -187,6 +189,8 @@ struct NKViewportInterface : public ViewportInterface {
 
 		memcpy(res->getBuffer(), size.data(), sizeof(size));
 		res->flush(0, 8);
+
+		refresh = true;
 	}
 
 	void release(const ViewportInfo*) final override { }
@@ -201,7 +205,7 @@ struct NKViewportInterface : public ViewportInterface {
 
 		//Do render
 
-		enum {EASY, HARD};
+		enum { EASY, NORMAL, HARD };
 		static int op = EASY;
 		static float value = 0.6f;
 		static int i =  20;
@@ -216,6 +220,7 @@ struct NKViewportInterface : public ViewportInterface {
 			// fixed widget window ratio width
 			nk_layout_row_dynamic(ctx, 30, 2);
 			if (nk_option_label(ctx, "Easy", op == EASY)) op = EASY;
+			if (nk_option_label(ctx, "Normal", op == NORMAL)) op = NORMAL;
 			if (nk_option_label(ctx, "Hard", op == HARD)) op = HARD;
 
 			// custom widget pixel width
@@ -230,99 +235,111 @@ struct NKViewportInterface : public ViewportInterface {
 		}
 		nk_end(ctx);
 
-		//TODO: Allow high level commands; like line, curve, image, etc.
+		if (!refresh && previous.data())
+			refresh = previous.size() != ctx->memory.needed || memcmp(previous.data(), ctx->memory.memory.ptr, previous.size());
 
 		//Convert to draw data
 
-		static const struct nk_draw_vertex_layout_element vertLayout[] = {
-			{ NK_VERTEX_POSITION, NK_FORMAT_FLOAT,  vertexLayout[0].offset },
-			{ NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, vertexLayout[1].offset },
-			{ NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, vertexLayout[2].offset },
-			{ NK_VERTEX_LAYOUT_END }
-		};
+		if (refresh) {
 
-		struct nk_convert_config cfg = {};
-		cfg.shape_AA = NK_ANTI_ALIASING_ON;
-		cfg.line_AA = NK_ANTI_ALIASING_ON;
-		cfg.vertex_layout = vertLayout;
-		cfg.vertex_size = vertexLayout.getStride();
-		cfg.vertex_alignment = 4 /* Detect? */;
-		cfg.circle_segment_count = 22;
-		cfg.curve_segment_count = 22;
-		cfg.arc_segment_count = 22;
-		cfg.global_alpha = 1.0f;
-		cfg.null = atlasTexture;
+			refresh = false;
 
-		nk_buffer cmds, verts, idx;
+			static const struct nk_draw_vertex_layout_element vertLayout[] = {
+				{ NK_VERTEX_POSITION, NK_FORMAT_FLOAT,  vertexLayout[0].offset },
+				{ NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, vertexLayout[1].offset },
+				{ NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, vertexLayout[2].offset },
+				{ NK_VERTEX_LAYOUT_END }
+			};
 
-		nk_buffer_init(&cmds, &allocator, NK_BUFFER_DEFAULT_INITIAL_SIZE);
-		nk_buffer_init(&verts, &allocator, NK_BUFFER_DEFAULT_INITIAL_SIZE);
-		nk_buffer_init(&idx, &allocator, NK_BUFFER_DEFAULT_INITIAL_SIZE);
-		nk_convert(ctx, &cmds, &verts, &idx, &cfg);
+			struct nk_convert_config cfg = {};
+			cfg.shape_AA = NK_ANTI_ALIASING_ON;
+			cfg.line_AA = NK_ANTI_ALIASING_ON;
+			cfg.vertex_layout = vertLayout;
+			cfg.vertex_size = vertexLayout.getStride();
+			cfg.vertex_alignment = 4 /* Detect? */;
+			cfg.circle_segment_count = 22;
+			cfg.curve_segment_count = 22;
+			cfg.arc_segment_count = 22;
+			cfg.global_alpha = 1.0f;
+			cfg.null = atlasTexture;
 
-		vbo.release();
-		ibo.release();
-		primitiveBuffer.release();
+			nk_buffer cmds, verts, idx;
 
-		auto vboStart = (u8*)verts.memory.ptr;
-		auto iboStart = (u8*)idx.memory.ptr;
+			nk_buffer_init(&cmds, &allocator, NK_BUFFER_DEFAULT_INITIAL_SIZE);
+			nk_buffer_init(&verts, &allocator, NK_BUFFER_DEFAULT_INITIAL_SIZE);
+			nk_buffer_init(&idx, &allocator, NK_BUFFER_DEFAULT_INITIAL_SIZE);
+			nk_convert(ctx, &cmds, &verts, &idx, &cfg);
 
-		vbo = {
-			g, NAME("NK VBO"),
-			GPUBuffer::Info(Buffer(vboStart, vboStart + verts.needed), GPUBufferType::VERTEX, GPUMemoryUsage::LOCAL)
-		};
+			vbo.release();
+			ibo.release();
+			primitiveBuffer.release();
 
-		ibo = {
-			g, NAME("NK IBO"),
-			GPUBuffer::Info(Buffer(iboStart, iboStart + idx.needed), GPUBufferType::INDEX, GPUMemoryUsage::LOCAL)
-		};
+			auto vboStart = (u8 *)verts.memory.ptr;
+			auto iboStart = (u8 *)idx.memory.ptr;
 
-		primitiveBuffer = {
-			g, NAME("Primitive buffer"),
-			PrimitiveBuffer::Info(
-				BufferLayout(vbo, vertexLayout),
-				BufferLayout(ibo, BufferAttributes(GPUFormat::R16u))
-			)
-		};
+			vbo = {
+				g, NAME("NK VBO"),
+				GPUBuffer::Info(Buffer(vboStart, vboStart + verts.needed), GPUBufferType::VERTEX, GPUMemoryUsage::LOCAL)
+			};
 
-		commands->clear();
-		commands->add(
-			BindPipeline(pipeline),
-			SetClearColor(Vec4f{ 0, 0.5, 1, 1}),
-			BeginFramebuffer(target),
-			SetViewport(),
-			BindPrimitiveBuffer(primitiveBuffer),
-			BindDescriptors(descriptors)
-		);
+			ibo = {
+				g, NAME("NK IBO"),
+				GPUBuffer::Info(Buffer(iboStart, iboStart + idx.needed), GPUBufferType::INDEX, GPUMemoryUsage::LOCAL)
+			};
 
+			primitiveBuffer = {
+				g, NAME("Primitive buffer"),
+				PrimitiveBuffer::Info(
+					BufferLayout(vbo, vertexLayout),
+					BufferLayout(ibo, BufferAttributes(GPUFormat::R16u))
+				)
+			};
 
-		const nk_draw_command *cmd{};
-		nk_draw_index offset{};
-
-		nk_draw_foreach(cmd, ctx, &cmds) {
-
-			if (!cmd->elem_count) continue;
-
-			Texture t = Texture::Ptr(cmd->texture.ptr);
-			auto r = cmd->clip_rect;
-
+			commands->clear();
 			commands->add(
-				r.w == 16384 ? SetScissor() : SetScissor({ u32(r.w), u32(r.h) }, { i32(r.x), i32(r.y) }),
-				DrawInstanced::indexed(cmd->elem_count, 1, offset)
+				BindPipeline(pipeline),
+				SetClearColor(Vec4f { 0, 0.5, 1, 1 }),
+				BeginFramebuffer(target),
+				SetViewportAndScissor(),
+				ClearFramebuffer(target),
+				BindPrimitiveBuffer(primitiveBuffer),
+				BindDescriptors(descriptors)
 			);
 
-			offset += u16(cmd->elem_count);
-		}
+			const nk_draw_command *cmd {};
+			nk_draw_index offset {};
 
-		commands->add(
-			EndFramebuffer()
-		);
+			nk_draw_foreach(cmd, ctx, &cmds) {
 
-		nk_buffer_free(&cmds);
-		nk_buffer_free(&verts);
-		nk_buffer_free(&idx);
+				if (!cmd->elem_count) continue;
 
-		g.present(target, swapchain, commands);
+				Texture t = Texture::Ptr(cmd->texture.ptr);
+				auto r = cmd->clip_rect;
+
+				commands->add(
+					r.w == 16384 ? SetScissor() : SetScissor({ u32(r.w), u32(r.h) }, { i32(r.x), i32(r.y) }),
+					DrawInstanced::indexed(cmd->elem_count, 1, offset)
+				);
+
+				offset += u16(cmd->elem_count);
+			}
+
+			commands->add(
+				EndFramebuffer()
+			);
+
+			nk_buffer_free(&cmds);
+			nk_buffer_free(&verts);
+			nk_buffer_free(&idx);
+
+			g.present(target, swapchain, commands);
+
+			u8 *prev = (u8*)ctx->memory.memory.ptr;
+
+			previous = Buffer(prev, prev + ctx->memory.needed);
+
+		} else
+			g.present(target, swapchain);
 
 		//Reset
 

@@ -229,6 +229,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 			SetClearColor(Vec4f{ 0.586f, 0.129f, 0.949f, 1.0f }),
 			BeginFramebuffer(intermediate),
+			ClearFramebuffer(intermediate),
 			SetViewportAndScissor(),
 
 			//TODO: BeginRenderPass instead of BeginFramebuffer
