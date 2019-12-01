@@ -312,6 +312,7 @@ struct NKViewportInterface : public ViewportInterface {
 				}
 
 				nk_input_motion(ctx, int(x), int(y));
+				nk_input_scroll(ctx, nk_vec2(f32(dvc->getCurrentAxis(MouseAxis::AXIS_WHEEL)), 0));
 				processedMouse = true;
 			}
 
