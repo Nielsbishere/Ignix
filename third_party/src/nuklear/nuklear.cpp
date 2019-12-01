@@ -325,12 +325,19 @@ struct NKViewportInterface : public ViewportInterface {
 		//Do render
 
 		enum { EASY, NORMAL, HARD };
-		static int op = EASY;
+		static int op = EASY, active[3]{ 1, 0, 1 }, selected{};
 		static float value = 0.6f;
 		static int i =  20;
+		static usz test{};
 
-		if (nk_begin(ctx, "Show", nk_rect(50, 50, 220, 220),
+		List<const c8*> names = {
+			"Cheese",
+			"Peanuts"
+		};
+
+		if (nk_begin(ctx, "Show", nk_rect(50, 50, 220, 300),
 					 NK_WINDOW_BORDER|NK_WINDOW_SCALABLE|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
+
 			// fixed widget pixel width
 			nk_layout_row_static(ctx, 30, 80, 1);
 			if (nk_button_label(ctx, "Button")) {
@@ -342,6 +349,14 @@ struct NKViewportInterface : public ViewportInterface {
 			if (nk_option_label(ctx, "Normal", op == NORMAL)) op = NORMAL;
 			if (nk_option_label(ctx, "Hard", op == HARD)) op = HARD;
 
+			nk_layout_row_dynamic(ctx, 30, 2);
+			nk_checkbox_label(ctx, "Yes?", active);
+			nk_checkbox_label(ctx, "No?", active + 1);
+			nk_checkbox_label(ctx, "Maybe?", active + 2);
+
+			nk_layout_row_dynamic(ctx, 30, 2);
+			nk_combobox(ctx, names.data(), int(names.size()), &selected, 30, nk_vec2(1, 1));
+
 			// custom widget pixel width
 			nk_layout_row_begin(ctx, NK_STATIC, 30, 2);
 			{
@@ -349,6 +364,7 @@ struct NKViewportInterface : public ViewportInterface {
 				nk_label(ctx, "Volume:", NK_TEXT_LEFT);
 				nk_layout_row_push(ctx, 110);
 				nk_slider_float(ctx, 0, &value, 1.0f, 0.1f);
+				nk_progress(ctx, &test, 100, 1);
 			}
 			nk_layout_row_end(ctx);
 		}
