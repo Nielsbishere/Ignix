@@ -8,7 +8,8 @@
 #include "helpers/graphics_object_ref.hpp"
 #include "utils/hash.hpp"
 #include "system/local_file_system.hpp"
-#include "input/input_device.hpp"
+#include "input/mouse.hpp"
+#include "input/keyboard.hpp"
 
 //A test to see how easy NK is to work with
 
@@ -37,6 +38,50 @@ void nkFree(nk_handle, u8 *old) {
 	oic::System::allocator()->freeArray(old, it->second);
 	sizes.erase(it);
 }
+
+oicExposedEnum(
+	NMouseButton, int,
+	BUTTON_LEFT = 0,
+	BUTTON_MIDDLE = 1,
+	BUTTON_RIGHT = 2
+)
+
+oicExposedEnum(
+	NKey, int,
+	KEY_SHIFT = NK_KEY_SHIFT,
+	KEY_CTRL = NK_KEY_CTRL,
+	KEY_DELETE = NK_KEY_DEL,
+	KEY_ENTER = NK_KEY_ENTER,
+	KEY_TAB = NK_KEY_TAB,
+	KEY_BACKSPACE = NK_KEY_BACKSPACE,
+	KEY_UP = NK_KEY_UP,
+	KEY_DOWN = NK_KEY_DOWN,
+	KEY_LEFT = NK_KEY_LEFT,
+	KEY_RIGHT = NK_KEY_RIGHT
+);
+
+//Missing:
+//NK_KEY_COPY,
+//NK_KEY_CUT,
+//NK_KEY_PASTE,
+///* Shortcuts: text field */
+//NK_KEY_TEXT_INSERT_MODE,
+//NK_KEY_TEXT_REPLACE_MODE,
+//NK_KEY_TEXT_RESET_MODE,
+//NK_KEY_TEXT_LINE_START,
+//NK_KEY_TEXT_LINE_END,
+//NK_KEY_TEXT_START,
+//NK_KEY_TEXT_END,
+//NK_KEY_TEXT_UNDO,
+//NK_KEY_TEXT_REDO,
+//NK_KEY_TEXT_SELECT_ALL,
+//NK_KEY_TEXT_WORD_LEFT,
+//NK_KEY_TEXT_WORD_RIGHT,
+///* Shortcuts: scrollbar */
+//NK_KEY_SCROLL_START,
+//NK_KEY_SCROLL_END,
+//NK_KEY_SCROLL_DOWN,
+//NK_KEY_SCROLL_UP,
 
 //viewport interface
 
@@ -196,28 +241,79 @@ struct NKViewportInterface : public ViewportInterface {
 
 	void release(const ViewportInfo*) final override { }
 
-	void onKeyPress(const ViewportInfo*, const InputDevice *dvc, InputHandle ih) {
-		printf("Pressed %s\n", dvc->nameByHandle(ih).c_str());
+	void onInputActivate(const ViewportInfo*, const InputDevice *dvc, InputHandle ih) {
+		oic::System::log()->debug("Pressed ", dvc->nameByHandle(ih).c_str());
 	}
 
-	void onKeyRelease(const ViewportInfo*, const InputDevice *dvc, InputHandle ih) {
-		printf("Released %s\n", dvc->nameByHandle(ih).c_str());
+	void onInputDeactivate(const ViewportInfo*, const InputDevice *dvc, InputHandle ih) {
+		oic::System::log()->debug("Released ", dvc->nameByHandle(ih).c_str());
 	}
 
-	void update(const ViewportInfo *, f64) final override {
+	void update(const ViewportInfo *vi, f64) final override {
 
 		//Receive events
 
 		nk_input_begin(ctx);
 
-		/*for(auto *dvc : vi->devices)
+		//Could potentially use a callback system for efficiency TODO:
+
+		bool processedMouse{};
+
+		for(auto *dvc : vi->devices)
 			if (dvc->getType() == InputDevice::Type::KEYBOARD) {
 
-				for (InputHandle i = dvc->begin(); i < dvc->end(); ++i)
-					if (!dvc->isUp(i))
-						oic::System::log()->println<LogLevel::DEBUG>(dvc->nameByHandle(i), " with state ", usz(dvc->getState(i)));
+				//Only loop through nuklear keys
 
-			}*/
+				for (usz i = 0; i < NKey::count; ++i) {
+
+					//Get our key
+
+					String name = NKey::nameById(i);
+					usz keyId = Key::idByName(name);
+
+					if (keyId == Key::count) continue;
+
+					//Send to NK
+
+					auto state = dvc->getState(InputHandle(keyId));
+
+					if (state == InputDevice::PRESSED)
+						nk_input_key(ctx, nk_keys(NKey::values[i]), 1);
+
+					else if (state == InputDevice::RELEASED)
+						nk_input_key(ctx, nk_keys(NKey::values[i]), 0);
+
+				}
+
+			} else if(dvc->getType() == InputDevice::Type::MOUSE) {
+
+				if (processedMouse) continue;
+
+				f64 x = dvc->getCurrentAxis(MouseAxis::AXIS_X);
+				f64 y = dvc->getCurrentAxis(MouseAxis::AXIS_Y);
+				f64 px = dvc->getPreviousAxis(MouseAxis::AXIS_X);
+				f64 py = dvc->getPreviousAxis(MouseAxis::AXIS_Y);
+
+				if (px == x && py == y) continue;
+
+
+				//Only loop through nuklear keys
+
+				for (usz i = 0; i < NMouseButton::count; ++i) {
+
+					//Get our key
+
+					String name = NMouseButton::nameById(i);
+					usz keyId = MouseButton::idByName(name);
+
+					if (keyId == MouseButton::count) continue;
+
+					nk_input_button(ctx, nk_buttons(i), int(x), int(y), int(dvc->getCurrentState(ButtonHandle(keyId))));
+				}
+
+				nk_input_motion(ctx, int(x), int(y));
+				processedMouse = true;
+			}
 
 		nk_input_end(ctx);
 
