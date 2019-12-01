@@ -91,7 +91,7 @@ namespace igx {
 
 			auto it = g.find(name);
 
-			oicAssert(it == g.end(), "The requested resource already exists");
+			oicAssert("The requested resource already exists", it == g.end());
 
 			//Try and create resource (nullptr if it fails)
 			

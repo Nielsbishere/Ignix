@@ -8,6 +8,7 @@
 #include "helpers/graphics_object_ref.hpp"
 #include "utils/hash.hpp"
 #include "system/local_file_system.hpp"
+#include "input/input_device.hpp"
 
 //A test to see how easy NK is to work with
 
@@ -106,8 +107,8 @@ struct NKViewportInterface : public ViewportInterface {
 		//Null texture (white)
 
 		Buffer vertShader, fragShader;
-		oicAssert(oic::System::files()->read("./shaders/pass_through.vert.spv", vertShader), "Couldn't find pass through vertex shader");
-		oicAssert(oic::System::files()->read("./shaders/pass_through.frag.spv", fragShader), "Couldn't find pass through fragment shader");
+		oicAssert("Couldn't find pass through vertex shader", oic::System::files()->read("./shaders/pass_through.vert.spv", vertShader));
+		oicAssert("Couldn't find pass through fragment shader", oic::System::files()->read("./shaders/pass_through.frag.spv", fragShader));
 
 		pipeline = {
 			g, NAME("Test pipeline"),
@@ -146,7 +147,7 @@ struct NKViewportInterface : public ViewportInterface {
 			Vec2u { u32(width), u32(height) }, GPUFormat::R8, GPUMemoryUsage::LOCAL, 1, 1
 		);
 
-		info.init({ Buffer(data, data + width * height) });
+		info.init({ Buffer(data, data + usz(width) * height) });
 
 		textureAtlas = {
 			g, NAME("Atlas texture"), info
@@ -195,13 +196,34 @@ struct NKViewportInterface : public ViewportInterface {
 
 	void release(const ViewportInfo*) final override { }
 
-	void render(const ViewportInfo*) final override  {
+	void onKeyPress(const ViewportInfo*, const InputDevice *dvc, InputHandle ih) {
+		printf("Pressed %s\n", dvc->nameByHandle(ih).c_str());
+	}
 
-		//Input
+	void onKeyRelease(const ViewportInfo*, const InputDevice *dvc, InputHandle ih) {
+		printf("Released %s\n", dvc->nameByHandle(ih).c_str());
+	}
+
+	void update(const ViewportInfo *vi, f64) final override {
+
+		//Receive events
 
 		nk_input_begin(ctx);
-		//TODO: nk events
+
+		/*for(auto *dvc : vi->devices)
+			if (dvc->getType() == InputDevice::Type::KEYBOARD) {
+
+				for (InputHandle i = dvc->begin(); i < dvc->end(); ++i)
+					if (!dvc->isUp(i))
+						oic::System::log()->println<LogLevel::DEBUG>(dvc->nameByHandle(i), " with state ", usz(dvc->getState(i)));
+
+			}*/
+
 		nk_input_end(ctx);
+
+	}
+
+	void render(const ViewportInfo*) final override  {
 
 		//Do render
 
@@ -354,7 +376,7 @@ int main() {
 	NKViewportInterface nkViewportInterface{ g };
 
 	System::viewportManager()->create(
-		ViewportInfo("NK test", {}, {}, 0, &nkViewportInterface)
+		ViewportInfo("NK test", {}, {}, 0, &nkViewportInterface, ViewportInfo::HANDLE_INPUT)
 	);
 
 	while (System::viewportManager()->size())
