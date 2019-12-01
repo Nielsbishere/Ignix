@@ -4,8 +4,7 @@
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 #define NK_INCLUDE_COMMAND_USERDATA
 #define NK_ZERO_COMMAND_MEMORY
-
-//#define NK_ASSERT(expr) assert(expr) TODO: Replace this with core2
+#define NK_KEYSTATE_BASED_INPUT
 
 //TODO: Abstract this in igxi::UI
 
@@ -13,7 +12,7 @@
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
 
-//https://github.com/vurtun/nuklear Commit adc52d710fe3c87194b99f540c53e82eb75c2521
+//https://github.com/Immediate-Mode-UI/nuklear Commit adc52d710fe3c87194b99f540c53e82eb75c2521
 //Slightly modified so it builds
 
 /*
