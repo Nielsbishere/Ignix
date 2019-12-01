@@ -204,7 +204,7 @@ struct NKViewportInterface : public ViewportInterface {
 		printf("Released %s\n", dvc->nameByHandle(ih).c_str());
 	}
 
-	void update(const ViewportInfo *vi, f64) final override {
+	void update(const ViewportInfo *, f64) final override {
 
 		//Receive events
 
