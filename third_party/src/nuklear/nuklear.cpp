@@ -241,86 +241,54 @@ struct NKViewportInterface : public ViewportInterface {
 
 	void release(const ViewportInfo*) final override { }
 
-	void onInputActivate(const ViewportInfo*, const InputDevice *dvc, InputHandle ih) {
-		oic::System::log()->debug("Pressed ", dvc->nameByHandle(ih).c_str());
-	}
+	void onInputUpdate(const ViewportInfo*, const InputDevice *dvc, InputHandle ih, bool isActive) final override {
 
-	void onInputDeactivate(const ViewportInfo*, const InputDevice *dvc, InputHandle ih) {
-		oic::System::log()->debug("Released ", dvc->nameByHandle(ih).c_str());
-	}
+		if (dvc->getType() == InputDevice::Type::KEYBOARD) {
 
-	void update(const ViewportInfo *vi, f64) final override {
+			String name = Key::nameById(ih);
+			usz nkid = NKey::idByName(name);
 
-		//Receive events
+			if (nkid != NKey::count)
+				nk_input_key(ctx, nk_keys(NKey::values[nkid]), int(isActive));
 
-		nk_input_begin(ctx);
+		} else if (dvc->getType() == InputDevice::Type::MOUSE) {
 
-		//Could potentially use a callback system for efficiency TODO:
+			f64 x = dvc->getCurrentAxis(MouseAxis::AXIS_X);
+			f64 y = dvc->getCurrentAxis(MouseAxis::AXIS_Y);
 
-		bool processedMouse{};
+			//Buttons
+			if (ih < MouseButton::count) {
 
-		for(auto *dvc : vi->devices)
-			if (dvc->getType() == InputDevice::Type::KEYBOARD) {
+				String name = MouseButton::nameById(ih);
+				usz nkid = NMouseButton::idByName(name);
 
-				//Only loop through nuklear keys
+				if (nkid != MouseButton::count)
+					nk_input_button(ctx, nk_buttons(NMouseButton::values[nkid]), int(x), int(y), int(isActive));
 
-				for (usz i = 0; i < NKey::count; ++i) {
+			}
+			
+			//Wheel or x/y
+			else {
 
-					//Get our key
+				usz axis = ih - MouseButton::count;
 
-					String name = NKey::nameById(i);
-					usz keyId = Key::idByName(name);
+				if (axis == MouseAxis::AXIS_WHEEL)
+					nk_input_scroll(ctx, nk_vec2(f32(dvc->getCurrentAxis(MouseAxis::AXIS_WHEEL)), 0));
 
-					if (keyId == Key::count) continue;
+				else if (axis == MouseAxis::AXIS_X || axis == MouseAxis::AXIS_Y)
+					nk_input_motion(ctx, int(x), int(y));
 
-					//Send to NK
-
-					auto state = dvc->getState(InputHandle(keyId));
-
-					if (state == InputDevice::PRESSED)
-						nk_input_key(ctx, nk_keys(NKey::values[i]), 1);
-
-					else if (state == InputDevice::RELEASED)
-						nk_input_key(ctx, nk_keys(NKey::values[i]), 0);
-
-				}
-
-			} else if(dvc->getType() == InputDevice::Type::MOUSE) {
-
-				if (processedMouse) continue;
-
-				f64 x = dvc->getCurrentAxis(MouseAxis::AXIS_X);
-				f64 y = dvc->getCurrentAxis(MouseAxis::AXIS_Y);
-				f64 px = dvc->getPreviousAxis(MouseAxis::AXIS_X);
-				f64 py = dvc->getPreviousAxis(MouseAxis::AXIS_Y);
-
-				if (px == x && py == y) continue;
-
-
-				//Only loop through nuklear keys
-
-				for (usz i = 0; i < NMouseButton::count; ++i) {
-
-					//Get our key
-
-					String name = NMouseButton::nameById(i);
-					usz keyId = MouseButton::idByName(name);
-
-					if (keyId == MouseButton::count) continue;
-
-					nk_input_button(ctx, nk_buttons(i), int(x), int(y), int(dvc->getCurrentState(ButtonHandle(keyId))));
-				}
-
-				nk_input_motion(ctx, int(x), int(y));
-				nk_input_scroll(ctx, nk_vec2(f32(dvc->getCurrentAxis(MouseAxis::AXIS_WHEEL)), 0));
-				processedMouse = true;
 			}
 
-		nk_input_end(ctx);
-
+		}
 	}
 
+	void update(const ViewportInfo*, f64) final override { }
+
 	void render(const ViewportInfo*) final override  {
+
+		//Capture input
+		nk_input_end(ctx);
 
 		//Do render
 
@@ -330,19 +298,19 @@ struct NKViewportInterface : public ViewportInterface {
 		static int i =  20;
 		static usz test{};
 
-		List<const c8*> names = {
+		static List<const c8*> names = {
 			"Cheese",
 			"Peanuts"
 		};
 
 		if (nk_begin(ctx, "Show", nk_rect(50, 50, 220, 300),
-					 NK_WINDOW_BORDER|NK_WINDOW_SCALABLE|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
+					 NK_WINDOW_BORDER|NK_WINDOW_SCALABLE|NK_WINDOW_MOVABLE|NK_WINDOW_TITLE)) {
 
 			// fixed widget pixel width
 			nk_layout_row_static(ctx, 30, 80, 1);
-			if (nk_button_label(ctx, "Button")) {
-				// event handling
-			}
+			if (nk_button_label(ctx, "Button"))
+				oic::System::log()->debug("Hi");
+
 			// fixed widget window ratio width
 			nk_layout_row_dynamic(ctx, 30, 2);
 			if (nk_option_label(ctx, "Easy", op == EASY)) op = EASY;
@@ -355,7 +323,7 @@ struct NKViewportInterface : public ViewportInterface {
 			nk_checkbox_label(ctx, "Maybe?", active + 2);
 
 			nk_layout_row_dynamic(ctx, 30, 2);
-			nk_combobox(ctx, names.data(), int(names.size()), &selected, 30, nk_vec2(1, 1));
+			nk_combobox(ctx, names.data(), int(names.size()), &selected, 30, nk_vec2(150, 200));
 
 			// custom widget pixel width
 			nk_layout_row_begin(ctx, NK_STATIC, 30, 2);
@@ -409,69 +377,84 @@ struct NKViewportInterface : public ViewportInterface {
 			ibo.release();
 			primitiveBuffer.release();
 
-			auto vboStart = (u8 *)verts.memory.ptr;
-			auto iboStart = (u8 *)idx.memory.ptr;
+			if (verts.needed) {
 
-			vbo = {
-				g, NAME("NK VBO"),
-				GPUBuffer::Info(Buffer(vboStart, vboStart + verts.needed), GPUBufferType::VERTEX, GPUMemoryUsage::LOCAL)
-			};
+				auto vboStart = (u8 *)verts.memory.ptr;
+				auto iboStart = (u8 *)idx.memory.ptr;
 
-			ibo = {
-				g, NAME("NK IBO"),
-				GPUBuffer::Info(Buffer(iboStart, iboStart + idx.needed), GPUBufferType::INDEX, GPUMemoryUsage::LOCAL)
-			};
+				vbo = {
+					g, NAME("NK VBO"),
+					GPUBuffer::Info(Buffer(vboStart, vboStart + verts.needed), GPUBufferType::VERTEX, GPUMemoryUsage::LOCAL)
+				};
 
-			primitiveBuffer = {
-				g, NAME("Primitive buffer"),
-				PrimitiveBuffer::Info(
-					BufferLayout(vbo, vertexLayout),
-					BufferLayout(ibo, BufferAttributes(GPUFormat::R16u))
-				)
-			};
+				ibo = {
+					g, NAME("NK IBO"),
+					GPUBuffer::Info(Buffer(iboStart, iboStart + idx.needed), GPUBufferType::INDEX, GPUMemoryUsage::LOCAL)
+				};
 
-			commands->clear();
-			commands->add(
-				BindPipeline(pipeline),
-				SetClearColor(Vec4f { 0, 0.5, 1, 1 }),
-				BeginFramebuffer(target),
-				SetViewportAndScissor(),
-				ClearFramebuffer(target),
-				BindPrimitiveBuffer(primitiveBuffer),
-				BindDescriptors(descriptors)
-			);
+				primitiveBuffer = {
+					g, NAME("Primitive buffer"),
+					PrimitiveBuffer::Info(
+						BufferLayout(vbo, vertexLayout),
+						BufferLayout(ibo, BufferAttributes(GPUFormat::R16u))
+					)
+				};
 
-			const nk_draw_command *cmd {};
-			nk_draw_index offset {};
-
-			nk_draw_foreach(cmd, ctx, &cmds) {
-
-				if (!cmd->elem_count) continue;
-
-				Texture t = Texture::Ptr(cmd->texture.ptr);
-				auto r = cmd->clip_rect;
-
+				commands->clear();
 				commands->add(
-					r.w == 16384 ? SetScissor() : SetScissor({ u32(r.w), u32(r.h) }, { i32(r.x), i32(r.y) }),
-					DrawInstanced::indexed(cmd->elem_count, 1, offset)
+					BindPipeline(pipeline),
+					SetClearColor(Vec4f { 0, 0.5, 1, 1 }),
+					BeginFramebuffer(target),
+					SetViewportAndScissor(),
+					ClearFramebuffer(target),
+					BindPrimitiveBuffer(primitiveBuffer),
+					BindDescriptors(descriptors)
 				);
 
-				offset += u16(cmd->elem_count);
+				const nk_draw_command *cmd {};
+				nk_draw_index offset {};
+
+				nk_draw_foreach(cmd, ctx, &cmds) {
+
+					if (!cmd->elem_count) continue;
+
+					Texture t = Texture::Ptr(cmd->texture.ptr);
+					auto r = cmd->clip_rect;
+
+					commands->add(
+						r.w == 16384 ? SetScissor() : SetScissor({ u32(r.w), u32(r.h) }, { i32(r.x), i32(r.y) }),
+						DrawInstanced::indexed(cmd->elem_count, 1, offset)
+					);
+
+					offset += u16(cmd->elem_count);
+				}
+
+				commands->add(
+					EndFramebuffer()
+				);
+
+				nk_buffer_free(&cmds);
+				nk_buffer_free(&verts);
+				nk_buffer_free(&idx);
+
+				g.present(target, swapchain, commands);
+
+				u8 *prev = (u8*)ctx->memory.memory.ptr;
+
+				previous = Buffer(prev, prev + ctx->memory.needed);
+
+			} else {
+
+				commands->clear();
+				commands->add(
+					SetClearColor(Vec4f { 0, 0.5, 1, 1 }),
+					BeginFramebuffer(target),
+					SetViewportAndScissor(),
+					ClearFramebuffer(target)
+				);
+
+				g.present(target, swapchain, commands);
 			}
-
-			commands->add(
-				EndFramebuffer()
-			);
-
-			nk_buffer_free(&cmds);
-			nk_buffer_free(&verts);
-			nk_buffer_free(&idx);
-
-			g.present(target, swapchain, commands);
-
-			u8 *prev = (u8*)ctx->memory.memory.ptr;
-
-			previous = Buffer(prev, prev + ctx->memory.needed);
 
 		} else
 			g.present(target, swapchain);
@@ -479,6 +462,9 @@ struct NKViewportInterface : public ViewportInterface {
 		//Reset
 
 		nk_clear(ctx);
+
+		//Capture input
+		nk_input_begin(ctx);
 	}
 
 };
