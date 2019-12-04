@@ -60,7 +60,7 @@ oicExposedEnum(
 	KEY_RIGHT = NK_KEY_RIGHT
 );
 
-//Missing:
+//TODO: Missing:
 //NK_KEY_COPY,
 //NK_KEY_CUT,
 //NK_KEY_PASTE,

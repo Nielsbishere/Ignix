@@ -13,7 +13,8 @@ file(GLOB_RECURSE ignixHpp "include/*.hpp")
 file(GLOB_RECURSE ignixCpp "src/*.cpp")
 
 file(GLOB_RECURSE depsHpp "third_party/include/*.hpp")
-file(GLOB_RECURSE depsCpp "third_party/src/*.cpp")
+
+file(GLOB_RECURSE testsCpp "test/*.cpp")
 
 add_subdirectory(ignis)
 add_subdirectory(igxi)
@@ -29,10 +30,10 @@ add_executable(
 	${ignixHpp}
 	${ignixCpp}
 	${depsHpp}
-	${depsCpp}
+	third_party/Nuklear/nuklear.h
 	${shaders}
 	CMakeLists.txt
-	test/test.cpp
+	${testsCpp}
 )
 
 set_property(TARGET ignix PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res")
