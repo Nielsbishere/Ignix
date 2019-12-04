@@ -23,6 +23,14 @@ add_subdirectory(igxi)
 
 file(GLOB_RECURSE shaders "res/shaders/*")
 
+# Nuklear dependency
+
+file(GLOB_RECURSE nuklear "third_party/Nuklear/src/*.h" "third_party/Nuklear/src/*.c")
+
+add_library(nuklear STATIC ${nuklear})
+
+add_custom_command(TARGET nuklear POST_BUILD COMMAND paq WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
+
 # Link library
 
 add_executable(
@@ -30,10 +38,10 @@ add_executable(
 	${ignixHpp}
 	${ignixCpp}
 	${depsHpp}
-	third_party/Nuklear/nuklear.h
 	${shaders}
-	CMakeLists.txt
 	${testsCpp}
+	CMakeLists.txt
+	third_party/Nuklear/nuklear.h	# Add the output of nuklear
 )
 
 set_property(TARGET ignix PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res")
@@ -42,7 +50,7 @@ target_include_directories(ignix PRIVATE include)
 target_include_directories(ignix PRIVATE third_party/include)
 target_include_directories(ignix PRIVATE Ignis/include)
 target_include_directories(ignix PRIVATE Ignis/core2/include)
-target_link_libraries(ignix PRIVATE ignis ocore igxi)
+target_link_libraries(ignix PRIVATE nuklear ignis ocore igxi)
 
 source_group("Headers" FILES ${ignisHpp})
 source_group("Source" FILES ${ignisCpp})
