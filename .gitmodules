@@ -6,4 +6,4 @@
 	url = https://github.com/Nielsbishere/igxi
 [submodule "third_party/Nuklear"]
 	path = third_party/Nuklear
-	url = https://github.com/Immediate-Mode-UI/Nuklear
+	url = https://github.com/Nielsbishere/Nuklear
