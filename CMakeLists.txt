@@ -13,6 +13,7 @@ file(GLOB_RECURSE ignixHpp "include/*.hpp")
 file(GLOB_RECURSE ignixCpp "src/*.cpp")
 
 file(GLOB_RECURSE depsHpp "third_party/include/*.hpp")
+file(GLOB_RECURSE depsHpp "third_party/src/*.cpp")
 
 file(GLOB_RECURSE testsCpp "test/*.cpp")
 
@@ -38,6 +39,7 @@ add_executable(
 	${ignixHpp}
 	${ignixCpp}
 	${depsHpp}
+	${depsCpp}
 	${shaders}
 	${testsCpp}
 	CMakeLists.txt
@@ -54,7 +56,7 @@ target_link_libraries(ignix PRIVATE nuklear ignis ocore igxi)
 
 source_group("Headers" FILES ${ignisHpp})
 source_group("Source" FILES ${ignisCpp})
-source_group("Deps headers" FILES ${depsHpp})
+source_group("Deps headers" FILES ${depsHpp} third_party/Nuklear/nuklear.h)
 source_group("Deps source" FILES ${depsCpp})
 source_group("Shaders" FILES ${shaders})
 

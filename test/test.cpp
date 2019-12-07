@@ -5,7 +5,7 @@
 #include "system/viewport_manager.hpp"
 #include "system/viewport_interface.hpp"
 #include "system/local_file_system.hpp"
-#include "utils/hash.hpp"
+#include "gui/gui.hpp"
 
 using namespace igx;
 using namespace oic;
@@ -13,6 +13,7 @@ using namespace oic;
 struct TestViewportInterface : public ViewportInterface {
 
 	Graphics &g;
+	GUI *gui;
 
 	//Resources
 
@@ -246,9 +247,15 @@ struct TestViewportInterface : public ViewportInterface {
 			EndFramebuffer()
 		);
 
+		gui = new GUI(g, intermediate);
+
 		//Release the graphics instance for us until we need it again
 
 		g.pause();
+	}
+
+	~TestViewportInterface() {
+		destroy(gui);
 	}
 
 	//Create viewport resources
@@ -276,29 +283,41 @@ struct TestViewportInterface : public ViewportInterface {
 
 	void resize(const ViewportInfo*, const Vec2u &size) final override {
 		intermediate->onResize(size);
+		gui->resize(size);
 		swapchain->onResize(size);
+	}
+
+	//Update input
+
+	void onInputUpdate(
+		const ViewportInfo*, const InputDevice *dvc, InputHandle ih, bool isActive
+	) final override {
+
+		gui->onInputUpdate(dvc, ih, isActive);
 	}
 
 	//Execute commandList
 
 	void render(const ViewportInfo*) final override {
-
-		//Copy pre-rendered result to viewports
-
-		g.present(intermediate, swapchain, cl);
+		gui->render(g);
+		g.present(intermediate, swapchain, cl, gui->getCommands());
 	}
 
 };
 
 //Create window and wait for exit
 
-int notmain() {
+int main() {
 
 	Graphics g;
 	TestViewportInterface viewportInterface(g);
 
+	g.pause();
+
 	System::viewportManager()->create(
-		ViewportInfo("Test window", {}, {}, 0, &viewportInterface)
+		ViewportInfo(
+			"Test window", {}, {}, 0, &viewportInterface, ViewportInfo::HANDLE_INPUT
+		)
 	);
 
 	//TODO: Better way of stalling than this; like interrupt
