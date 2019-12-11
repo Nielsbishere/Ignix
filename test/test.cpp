@@ -33,7 +33,7 @@ struct TestViewportInterface : public ViewportInterface {
 	//Create resources
 
 	TestViewportInterface(Graphics &g): g(g) {
-		
+
 		intermediate = {
 			g, NAME("Framebuffer"),
 			Framebuffer::Info(

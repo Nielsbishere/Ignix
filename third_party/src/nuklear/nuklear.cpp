@@ -370,7 +370,6 @@ namespace igx {
 		enum { EASY, NORMAL, HARD };
 		static int op = EASY, active[3]{ 1, 0, 1 }, selected{};
 		static float value = 0.6f;
-		static int i =  20;
 		static usz test{};
 
 		static c8 const * names[] = {

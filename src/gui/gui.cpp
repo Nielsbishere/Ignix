@@ -5,26 +5,26 @@
 namespace igx {
 
 	GUI::GUI(Graphics &g, const SetClearColor &clearColor, usz commandListSize) :
-		clearColor(clearColor), flags(Flags(Flags::OWNS_COMMAND_LIST | Flags::OWNS_FRAMEBUFFER)),
-		commandListSize(commandListSize)
+		clearColor(clearColor), commandListSize(commandListSize),
+		flags(Flags(Flags::OWNS_COMMAND_LIST | Flags::OWNS_FRAMEBUFFER))
 	{
 		init(g);
 	}
 
 	GUI::GUI(Graphics &g, const Framebuffer &fb, usz commandListSize) :
-		flags(Flags::OWNS_COMMAND_LIST), target(fb), commandListSize(commandListSize)
+		target(fb), commandListSize(commandListSize), flags(Flags::OWNS_COMMAND_LIST)
 	{
 		init(g);
 	}
 
 	GUI::GUI(Graphics &g, const CommandList &cl) :
-		flags(Flags::OWNS_FRAMEBUFFER), commands(cl)
+		commands(cl), flags(Flags::OWNS_FRAMEBUFFER)
 	{
 		init(g);
 	}
 
 	GUI::GUI(Graphics &g, const Framebuffer &fb, const CommandList &cl) :
-		flags(Flags::NONE), commands(cl), target(fb)
+		target(fb), commands(cl), flags(Flags::NONE)
 	{
 		init(g);
 	}
