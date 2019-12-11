@@ -12,7 +12,5 @@ jobs:
         submodules: recursive
     - name: cmake build
       run: cmake . -G "Visual Studio 16 2019"
-    - name: debug
-      run: tree
     - name: build
       run: cmake --build . -j 8
