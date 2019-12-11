@@ -13,7 +13,7 @@ file(GLOB_RECURSE ignixHpp "include/*.hpp")
 file(GLOB_RECURSE ignixCpp "src/*.cpp")
 
 file(GLOB_RECURSE depsHpp "third_party/include/*.hpp")
-file(GLOB_RECURSE depsHpp "third_party/src/*.cpp")
+file(GLOB_RECURSE depsCpp "third_party/src/*.cpp")
 
 file(GLOB_RECURSE testsCpp "test/*.cpp")
 
