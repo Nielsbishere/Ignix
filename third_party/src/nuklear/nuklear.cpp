@@ -125,13 +125,13 @@ namespace igx {
 
 		nk_font_atlas_begin(&atlas);
 
-		data->font = nk_font_atlas_add_default(&atlas, 12 /* TODO: Pixel height */, nullptr);
+		data->font = nk_font_atlas_add_default(&atlas, 13 /* TODO: Pixel height */, nullptr);
 
 		int width{}, height{};
 		u8 *atlasData = (u8*) nk_font_atlas_bake(&atlas, &width, &height, NK_FONT_ATLAS_ALPHA8);
 
 		Texture::Info info(
-			Vec2u{ u32(width), u32(height) }, GPUFormat::R8, GPUMemoryUsage::LOCAL, 1, 1
+			Vec2u32{ u32(width), u32(height) }, GPUFormat::R8, GPUMemoryUsage::LOCAL, 1, 1
 		);
 
 		info.init({ Buffer(atlasData, atlasData + usz(width) * height) });

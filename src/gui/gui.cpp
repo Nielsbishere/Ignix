@@ -83,14 +83,14 @@ namespace igx {
 		initData(g);
 	}
 
-	void GUI::resize(const Vec2u &size) {
+	void GUI::resize(const Vec2u32 &size) {
 
 		requestUpdate();
 
 		if (flags & GUI::OWNS_FRAMEBUFFER)
 			target->onResize(size);
 
-		memcpy(resolution->getBuffer(), size.data(), sizeof(size));
+		memcpy(resolution->getBuffer(), size.arr, sizeof(size));
 		resolution->flush(0, 8);
 
 		//TODO: UIWindows

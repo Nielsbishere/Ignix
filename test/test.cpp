@@ -45,7 +45,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 		List<BufferAttributes> attrib{ { GPUFormat::RG32f } };
 
-		const List<Vec2f> vboBuffer{
+		const List<Vec2f32> vboBuffer{
 			{ 0.5, -0.5 }, { -1, -1 },
 			{ -1, 1 }, { 0.5, 0.5 }
 		};
@@ -64,13 +64,14 @@ struct TestViewportInterface : public ViewportInterface {
 
 		//Create uniform buffer
 
-		const Vec3f mask = { 1, 1, 1 };
+		constexpr Vec3f32 mask = { 1, 1, 1 };
+		const Buffer maskBuffer((u8*)mask.arr, (u8*)(mask.arr) + sizeof(mask));
 
 		uniforms = {
 			g, NAME("Test pipeline uniform buffer"),
 			ShaderBuffer::Info(
-				HashMap<String, ShaderBufferLayout>{ { NAME("mask"), { 0, mask } } },
-				GPUBufferType::UNIFORM, GPUMemoryUsage::LOCAL
+				GPUBufferType::UNIFORM, GPUMemoryUsage::LOCAL,
+				{ { NAME("mask"), ShaderBufferLayout(0, maskBuffer) } }
 			)
 		};
 
@@ -109,7 +110,7 @@ struct TestViewportInterface : public ViewportInterface {
 		computeOutput = {
 			g, NAME("Compute output"),
 			Texture::Info(
-				Vec2u{ 512, 512 }, GPUFormat::RGBA16f, GPUMemoryUsage::LOCAL, 1, 1
+				Vec2u32{ 512, 512 }, GPUFormat::RGBA16f, GPUMemoryUsage::LOCAL, 1, 1
 			)
 		};
 
@@ -146,7 +147,7 @@ struct TestViewportInterface : public ViewportInterface {
 				PipelineFlag::OPTIMIZE,
 				comp,
 				pipelineLayout,
-				Vec3u{ 16, 16, 1 }
+				Vec3u32{ 16, 16, 1 }
 			)
 		};
 
@@ -228,7 +229,7 @@ struct TestViewportInterface : public ViewportInterface {
 			
 			//Clear and bind MSAA
 
-			SetClearColor(Vec4f{ 0.586f, 0.129f, 0.949f, 1.0f }),
+			SetClearColor(Vec4f32{ 0.586f, 0.129f, 0.949f, 1.0f }),
 			BeginFramebuffer(intermediate),
 			ClearFramebuffer(intermediate),
 			SetViewportAndScissor(),
@@ -281,7 +282,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 	//Update size of surfaces
 
-	void resize(const ViewportInfo*, const Vec2u &size) final override {
+	void resize(const ViewportInfo*, const Vec2u32 &size) final override {
 		intermediate->onResize(size);
 		gui->resize(size);
 		swapchain->onResize(size);

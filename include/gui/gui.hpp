@@ -83,7 +83,7 @@ namespace igx {
 		~GUI();
 
 		//Create UI with its own framebuffer (Flags::NONE)
-		GUI(Graphics &g, const SetClearColor &clearColor = Vec4f { 0, 0, 0, 0 }, usz commandListSize = 4_MiB);
+		GUI(Graphics &g, const SetClearColor &clearColor = Vec4f32(), usz commandListSize = 4_MiB);
 
 		//Creates UI with a managed framebuffer
 		GUI(Graphics &g, const Framebuffer &fb, usz commandListSize = 4_MiB);
@@ -95,7 +95,7 @@ namespace igx {
 		GUI(Graphics &g, const Framebuffer &fb, const CommandList &cl);
 
 		//Resize the UI's framebuffer (required, even for managed framebuffers)
-		void resize(const Vec2u &target);
+		void resize(const Vec2u32 &target);
 
 		//Requests the UI to redraw next draw
 		void requestUpdate();

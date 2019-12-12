@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.13.0)
 project(ignix)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -61,7 +63,7 @@ source_group("Deps source" FILES ${depsCpp})
 source_group("Shaders" FILES ${shaders})
 
 if(MSVC)
-    target_compile_options(ignix PRIVATE /W4 /WX /MD /MP /wd26812)
+    target_compile_options(ignix PRIVATE /W4 /WX /MD /MP /wd26812 /wd4201)
 else()
     target_compile_options(ignix PRIVATE -Wall -Wextra -pedantic -Werror)
 endif()
