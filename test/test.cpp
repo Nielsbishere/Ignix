@@ -6,6 +6,7 @@
 #include "system/viewport_interface.hpp"
 #include "system/local_file_system.hpp"
 #include "gui/gui.hpp"
+#include "types/mat.hpp"
 
 using namespace igx;
 using namespace oic;
@@ -30,6 +31,20 @@ struct TestViewportInterface : public ViewportInterface {
 	//TODO: Demonstrate multiple windows
 	//TODO: Compute and use render targets
 
+	//Data on the GPU (test shader)
+	struct UniformBuffer {
+
+		Mat4x4f32 cam;
+		Vec3f32 mask;
+
+		UniformBuffer(
+			f32 aspect, Vec3f32 mask = { 1, 1, 1 },
+			f32 fov = f32(70_deg), f32 near = .1f, f32 far = 100
+		) :
+			mask(mask), cam(Mat4x4f32::perspective(fov, aspect, near, far)) {}
+
+	};
+
 	//Create resources
 
 	TestViewportInterface(Graphics &g): g(g) {
@@ -43,11 +58,11 @@ struct TestViewportInterface : public ViewportInterface {
 
 		//Create primitive buffer
 
-		List<BufferAttributes> attrib{ { GPUFormat::RG32f } };
+		List<BufferAttributes> attrib{ { GPUFormat::RGB32f } };
 
-		const List<Vec2f32> vboBuffer{
-			{ 0.5, -0.5 }, { -1, -1 },
-			{ -1, 1 }, { 0.5, 0.5 }
+		const List<Vec3f32> vboBuffer{
+			{ 1, -1, -1 }, { -1, -1, 1 },
+			{ -1, 1, -1 }, { 1, 1, 1 }
 		};
 
 		const List<u8> iboBuffer{
@@ -64,14 +79,11 @@ struct TestViewportInterface : public ViewportInterface {
 
 		//Create uniform buffer
 
-		constexpr Vec3f32 mask = { 1, 1, 1 };
-		const Buffer maskBuffer((u8*)mask.arr, (u8*)(mask.arr) + sizeof(mask));
-
 		uniforms = {
 			g, NAME("Test pipeline uniform buffer"),
 			ShaderBuffer::Info(
-				GPUBufferType::UNIFORM, GPUMemoryUsage::LOCAL,
-				{ { NAME("mask"), ShaderBufferLayout(0, maskBuffer) } }
+				GPUBufferType::UNIFORM, GPUMemoryUsage::CPU_WRITE,
+				{ { NAME("mask"), ShaderBufferLayout(0, Buffer(sizeof(UniformBuffer))) } }
 			)
 		};
 
@@ -168,7 +180,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 			RegisterLayout(
 				NAME("Test"), 0, GPUBufferType::UNIFORM, 0,
-				ShaderAccess::FRAGMENT, uniforms->size()
+				ShaderAccess::VERTEX_FRAGMENT, uniforms->size()
 			),
 
 			RegisterLayout(
@@ -283,6 +295,11 @@ struct TestViewportInterface : public ViewportInterface {
 	//Update size of surfaces
 
 	void resize(const ViewportInfo*, const Vec2u32 &size) final override {
+
+		UniformBuffer buffer(size.cast<Vec2f32>().aspect());
+		memcpy(uniforms->getBuffer(), &buffer, sizeof(UniformBuffer));
+		uniforms->flush(0, sizeof(UniformBuffer));
+
 		intermediate->onResize(size);
 		gui->resize(size);
 		swapchain->onResize(size);
