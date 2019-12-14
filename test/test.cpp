@@ -7,6 +7,7 @@
 #include "system/local_file_system.hpp"
 #include "gui/gui.hpp"
 #include "types/mat.hpp"
+#include "input/keyboard.hpp"
 
 using namespace igx;
 using namespace oic;
@@ -28,20 +29,47 @@ struct TestViewportInterface : public ViewportInterface {
 	Texture tex2D, computeOutput;
 	Sampler samp;
 
+	Vec2u32 res;
+	Vec3f32 eye{ 0, 0, 5 };
+
 	//TODO: Demonstrate multiple windows
 	//TODO: Compute and use render targets
 
 	//Data on the GPU (test shader)
 	struct UniformBuffer {
 
-		Mat4x4f32 cam;
+		Mat4x4f32 proj, view;
 		Vec3f32 mask;
 
-		UniformBuffer(
-			f32 aspect, Vec3f32 mask = { 1, 1, 1 },
-			f32 fov = f32(70_deg), f32 near = .1f, f32 far = 100
-		) :
-			mask(mask), cam(Mat4x4f32::perspective(fov, aspect, near, far)) {}
+		static inline UniformBuffer lookAtProj(
+			f32 aspect,
+			const Vec3f32 &eye = { 0, 0, 5 },
+			const Vec3f32 &center = { 0, 0, 0 },
+			f32 fov = f32(70_deg), f32 near = .1f, f32 far = 100,
+			const Vec3f32 &mask = { 1, 1, 1 },
+			const Vec3f32 &up = { 0, 1, 0 }
+		){
+			return {
+				Mat4x4f32::perspective(fov, aspect, near, far),
+				Mat4x4f32::lookAt(eye, center, up),
+				mask
+			};
+		}
+
+		static inline UniformBuffer lookDirectionProj(
+			f32 aspect,
+			const Vec3f32 &eye = { 0, 0, 5 },
+			const Vec3f32 &dir = { 0, 0, -1 },
+			f32 fov = f32(70_deg), f32 near = .1f, f32 far = 100,
+			const Vec3f32 &mask = { 1, 1, 1 },
+			const Vec3f32 &up = { 0, 1, 0 }
+		){
+			return {
+				Mat4x4f32::perspective(fov, aspect, near, far),
+				Mat4x4f32::lookDirection(eye, dir, up),
+				mask
+			};
+		}
 
 	};
 
@@ -292,14 +320,19 @@ struct TestViewportInterface : public ViewportInterface {
 		swapchain.release();
 	}
 
+	//Helper functions
+
+	void updateCamera() {
+		UniformBuffer buffer = UniformBuffer::lookDirectionProj(res.cast<Vec2f32>().aspect(), eye);
+		memcpy(uniforms->getBuffer(), &buffer, sizeof(UniformBuffer));
+		uniforms->flush(0, sizeof(UniformBuffer));
+	}
+
 	//Update size of surfaces
 
 	void resize(const ViewportInfo*, const Vec2u32 &size) final override {
-
-		UniformBuffer buffer(size.cast<Vec2f32>().aspect());
-		memcpy(uniforms->getBuffer(), &buffer, sizeof(UniformBuffer));
-		uniforms->flush(0, sizeof(UniformBuffer));
-
+		res = size;
+		updateCamera();
 		intermediate->onResize(size);
 		gui->resize(size);
 		swapchain->onResize(size);
@@ -321,6 +354,32 @@ struct TestViewportInterface : public ViewportInterface {
 		g.present(intermediate, swapchain, cl, gui->getCommands());
 	}
 
+	//Update eye
+	void update(const ViewportInfo *vi, f64 dt) final override {
+	
+		Vec3f32 d;
+
+		for(auto *dvc : vi->devices)
+			if (dvc->isType(InputDevice::KEYBOARD)) {
+
+				//TODO: Y is flipped?
+
+				if (dvc->isDown(Key::KEY_W)) d += Vec3f32(0, 0, -1);
+				if (dvc->isDown(Key::KEY_S)) d += Vec3f32(0, 0, 1);
+
+				if (dvc->isDown(Key::KEY_E)) d += Vec3f32(0, -1, 0);
+				if (dvc->isDown(Key::KEY_Q)) d += Vec3f32(0, 1, 0);
+
+				if (dvc->isDown(Key::KEY_D)) d += Vec3f32(1, 0, 0);
+				if (dvc->isDown(Key::KEY_A)) d += Vec3f32(-1, 0, 0);
+
+			}
+
+		if (d.any()) {
+			eye += d * f32(dt);
+			updateCamera();
+		}
+	}
 };
 
 //Create window and wait for exit

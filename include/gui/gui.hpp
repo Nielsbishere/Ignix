@@ -101,7 +101,8 @@ namespace igx {
 		void requestUpdate();
 
 		//Sends input information to the UI
-		void onInputUpdate(const oic::InputDevice*, oic::InputHandle, bool isActive);
+		//returns true if the input was accepted
+		bool onInputUpdate(const oic::InputDevice*, oic::InputHandle, bool isActive);
 
 		//Should be called per frame, but doesn't necessarily always render
 		void render(Graphics &g);

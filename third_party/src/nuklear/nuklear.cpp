@@ -305,7 +305,7 @@ namespace igx {
 	
 	//Receive input
 
-	void GUI::onInputUpdate(const InputDevice *dvc, InputHandle ih, bool isActive) {
+	bool GUI::onInputUpdate(const InputDevice *dvc, InputHandle ih, bool isActive) {
 
 		if (dvc->getType() == InputDevice::Type::KEYBOARD) {
 
@@ -315,6 +315,7 @@ namespace igx {
 			if (nkid != NKey::count) {
 				couldRefresh = true;
 				nk_input_key(data->ctx, nk_keys(NKey::values[nkid]), int(isActive));
+				return true;
 			}
 
 		} else if (dvc->getType() == InputDevice::Type::MOUSE) {
@@ -331,6 +332,7 @@ namespace igx {
 				if (nkid != MouseButton::count) {
 					couldRefresh = true;
 					nk_input_button(data->ctx, nk_buttons(NMouseButton::values[nkid]), int(x), int(y), int(isActive));
+					return true;
 				}
 
 			}
@@ -343,15 +345,19 @@ namespace igx {
 				if (axis == MouseAxis::AXIS_WHEEL) {
 					couldRefresh = true;
 					nk_input_scroll(data->ctx, nk_vec2(f32(dvc->getCurrentAxis(MouseAxis::AXIS_WHEEL)), 0));
+					return true;
 				}
 
 				else if (axis == MouseAxis::AXIS_X || axis == MouseAxis::AXIS_Y) {
 					couldRefresh = true;
 					nk_input_motion(data->ctx, int(x), int(y));
+					return true;
 				}
 
 			}
 		}
+
+		return false;
 	}
 
 	//Nuklear test
