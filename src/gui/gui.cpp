@@ -57,7 +57,8 @@ namespace igx {
 					{ ShaderStage::FRAGMENT, fragShader }
 				},
 				pipelineLayout,
-				PipelineMSAA(msaa, .2f),
+				MSAA(msaa, .2f),
+				DepthStencil(),
 				Rasterizer(),
 				BlendState::alphaBlend()
 			)

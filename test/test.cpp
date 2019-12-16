@@ -80,7 +80,7 @@ struct TestViewportInterface : public ViewportInterface {
 		intermediate = {
 			g, NAME("Framebuffer"),
 			Framebuffer::Info(
-				{ GPUFormat::RGBA8 }, DepthFormat::NONE, false, 8
+				{ GPUFormat::RGBA8 }, DepthFormat::D32, true, 8
 			)
 		};
 
@@ -89,12 +89,19 @@ struct TestViewportInterface : public ViewportInterface {
 		List<BufferAttributes> attrib{ { GPUFormat::RGB32f } };
 
 		const List<Vec3f32> vboBuffer{
-			{ 1, -1, -1 }, { -1, -1, 1 },
-			{ -1, 1, -1 }, { 1, 1, 1 }
+			{ -1, -1, -1 }, { 1, -1, -1 },
+			{ 1, 1, -1 },	{ -1, 1, -1 },
+			{ -1, -1, 1 },	{ 1, -1, 1 },
+			{ 1, 1, 1 },	{ -1, 1, 1 }
 		};
 
 		const List<u8> iboBuffer{
-			0,3,2, 2,1,0
+			0,1,2, 2,3,0,			//Bottom
+			4,7,6, 6,5,4,			//Top
+			0,4,7, 7,3,0,			//Left
+			1,2,6, 6,5,1,			//Right
+			7,3,2, 2,6,7,			//Front
+			1,5,4, 4,0,1			//Back
 		};
 
 		mesh = {
@@ -240,17 +247,16 @@ struct TestViewportInterface : public ViewportInterface {
 
 				attrib,
 
-				{
+				HashMap<ShaderStage, Buffer>{
 					{ ShaderStage::VERTEX, vert },
 					{ ShaderStage::FRAGMENT, frag }
 				},
 
 				pipelineLayout,
-				PipelineMSAA(intermediate->getInfo().samples, .2f)
+				MSAA(intermediate->getInfo().samples, .2f),
+				DepthStencil::depth()
 
 				//TODO:
-				//DepthStencil()
-				//RenderPass
 				//Parent pipeline / allow parenting (optional)
 			)
 		};
@@ -270,8 +276,8 @@ struct TestViewportInterface : public ViewportInterface {
 			//Clear and bind MSAA
 
 			SetClearColor(Vec4f32(0.586f, 0.129f, 0.949f, 1.0f)),
-			BeginFramebuffer(intermediate),
 			ClearFramebuffer(intermediate),
+			BeginFramebuffer(intermediate),
 			SetViewportAndScissor(),
 
 			//TODO: BeginRenderPass instead of BeginFramebuffer

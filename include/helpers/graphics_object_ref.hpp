@@ -147,9 +147,10 @@ namespace igx {
 	using DescriptorsSubresources = ignis::Descriptors::Subresources;
 	using RegisterLayout = ignis::RegisterLayout;
 	using GPUSubresource = ignis::GPUSubresource;
-	using Rasterizer = ignis::Pipeline::Rasterizer;
-	using BlendState = ignis::Pipeline::BlendState;
-	using PipelineMSAA = ignis::Pipeline::MSAA;
+	using Rasterizer = ignis::Rasterizer;
+	using BlendState = ignis::BlendState;
+	using MSAA = ignis::MSAA;
+	using DepthStencil = ignis::DepthStencil;
 
 	using GPUFormat = ignis::GPUFormat;
 	using DepthFormat = ignis::DepthFormat;
@@ -164,7 +165,8 @@ namespace igx {
 	using FillMode = ignis::FillMode;
 	using CullMode = ignis::CullMode;
 	using WindMode = ignis::WindMode;
-	using BlendLogicOp = ignis::Pipeline::BlendState::LogicOp;
+	using BlendLogicOp = ignis::BlendState::LogicOp;
+	using Stencil = ignis::DepthStencil::Stencil;
 
 }
 
