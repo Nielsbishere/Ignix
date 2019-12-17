@@ -59,7 +59,7 @@ namespace igx {
 				pipelineLayout,
 				MSAA(msaa, .2f),
 				DepthStencil(),
-				Rasterizer(),
+				Rasterizer(CullMode::NONE),
 				BlendState::alphaBlend()
 			)
 		};
