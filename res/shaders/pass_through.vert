@@ -13,5 +13,5 @@ layout(binding=0, std140) uniform Res {
 void main() {
 	uv = vuv;
 	col = vcol;
-    gl_Position = vec4(vpos / (res - 1) * 2 - 1, 0, 1);
+    gl_Position = vec4(vpos / res * 2 - 1, 0, 1);
 }

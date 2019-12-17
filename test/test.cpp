@@ -8,6 +8,8 @@
 #include "gui/gui.hpp"
 #include "types/mat.hpp"
 #include "input/keyboard.hpp"
+#include "input/mouse.hpp"
+#include "utils/math.hpp"
 
 using namespace igx;
 using namespace oic;
@@ -30,7 +32,8 @@ struct TestViewportInterface : public ViewportInterface {
 	Sampler samp;
 
 	Vec2u32 res;
-	Vec3f32 eye{ 0, 0, 5 };
+	Vec3f32 eye{ 3, 3, 7 };
+	f64 speed = 2;
 
 	//TODO: Demonstrate multiple windows
 	//TODO: Compute and use render targets
@@ -45,12 +48,12 @@ struct TestViewportInterface : public ViewportInterface {
 			f32 aspect,
 			const Vec3f32 &eye = { 0, 0, 5 },
 			const Vec3f32 &center = { 0, 0, 0 },
-			f32 fov = f32(70_deg), f32 near = .1f, f32 far = 100,
+			f32 fov = f32(70_deg), f32 near = .1f,
 			const Vec3f32 &mask = { 1, 1, 1 },
 			const Vec3f32 &up = { 0, 1, 0 }
 		){
 			return {
-				Mat4x4f32::perspective(fov, aspect, near, far),
+				Mat4x4f32::perspective(fov, aspect, near),
 				Mat4x4f32::lookAt(eye, center, up),
 				mask
 			};
@@ -60,12 +63,12 @@ struct TestViewportInterface : public ViewportInterface {
 			f32 aspect,
 			const Vec3f32 &eye = { 0, 0, 5 },
 			const Vec3f32 &dir = { 0, 0, -1 },
-			f32 fov = f32(70_deg), f32 near = .1f, f32 far = 100,
+			f32 fov = f32(70_deg), f32 near = .1f,
 			const Vec3f32 &mask = { 1, 1, 1 },
 			const Vec3f32 &up = { 0, 1, 0 }
 		){
 			return {
-				Mat4x4f32::perspective(fov, aspect, near, far),
+				Mat4x4f32::perspective(fov, aspect, near),
 				Mat4x4f32::lookDirection(eye, dir, up),
 				mask
 			};
@@ -80,7 +83,7 @@ struct TestViewportInterface : public ViewportInterface {
 		intermediate = {
 			g, NAME("Framebuffer"),
 			Framebuffer::Info(
-				{ GPUFormat::RGBA8 }, DepthFormat::D32, true, 8
+				{ GPUFormat::RGBA8 }, DepthFormat::D32, false, 8
 			)
 		};
 
@@ -96,12 +99,12 @@ struct TestViewportInterface : public ViewportInterface {
 		};
 
 		const List<u8> iboBuffer{
-			0,1,2, 2,3,0,			//Bottom
-			4,7,6, 6,5,4,			//Top
-			0,4,7, 7,3,0,			//Left
-			1,2,6, 6,5,1,			//Right
-			7,3,2, 2,6,7,			//Front
-			1,5,4, 4,0,1			//Back
+			0,1,2, 2,3,0,			//Front
+			4,7,6, 6,5,4,			//Back
+			0,3,7, 7,4,0,			//Left
+			1,5,6, 6,2,1,			//Right
+			7,3,2, 2,6,7,			//Top
+			1,0,4, 4,5,1			//Bottom
 		};
 
 		mesh = {
@@ -276,9 +279,9 @@ struct TestViewportInterface : public ViewportInterface {
 			//Clear and bind MSAA
 
 			SetClearColor(Vec4f32(0.586f, 0.129f, 0.949f, 1.0f)),
-			ClearFramebuffer(intermediate),
 			BeginFramebuffer(intermediate),
 			SetViewportAndScissor(),
+			ClearFramebuffer(intermediate),
 
 			//TODO: BeginRenderPass instead of BeginFramebuffer
 
@@ -368,21 +371,25 @@ struct TestViewportInterface : public ViewportInterface {
 		for(auto *dvc : vi->devices)
 			if (dvc->isType(InputDevice::KEYBOARD)) {
 
-				//TODO: Y is flipped?
-
 				if (dvc->isDown(Key::KEY_W)) d += Vec3f32(0, 0, -1);
 				if (dvc->isDown(Key::KEY_S)) d += Vec3f32(0, 0, 1);
 
-				if (dvc->isDown(Key::KEY_E)) d += Vec3f32(0, -1, 0);
-				if (dvc->isDown(Key::KEY_Q)) d += Vec3f32(0, 1, 0);
+				if (dvc->isDown(Key::KEY_Q)) d += Vec3f32(0, -1, 0);
+				if (dvc->isDown(Key::KEY_E)) d += Vec3f32(0, 1, 0);
 
 				if (dvc->isDown(Key::KEY_D)) d += Vec3f32(1, 0, 0);
 				if (dvc->isDown(Key::KEY_A)) d += Vec3f32(-1, 0, 0);
 
+			} else if (dvc->isType(InputDevice::MOUSE)) {
+
+				f64 delta = dvc->getCurrentAxis(MouseAxis::AXIS_WHEEL);
+
+				if(delta)
+					speed = oic::Math::clamp(speed * 1 + (delta / 1024), 0.5, 5.0);
 			}
 
 		if (d.any()) {
-			eye += d * f32(dt);
+			eye += d * f32(dt * speed);
 			updateCamera();
 		}
 	}
