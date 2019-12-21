@@ -35,45 +35,15 @@ struct TestViewportInterface : public ViewportInterface {
 	Vec3f32 eye{ 3, 3, 7 };
 	f64 speed = 2;
 
+	Vec3f32 cubePosition, cubeRotation, cubeScale;
+
 	//TODO: Demonstrate multiple windows
-	//TODO: Compute and use render targets
+	//TODO: Use render targets
 
 	//Data on the GPU (test shader)
 	struct UniformBuffer {
-
-		Mat4x4f32 proj, view;
+		Mat4x4f32 proj, view, world;
 		Vec3f32 mask;
-
-		static inline UniformBuffer lookAtProj(
-			f32 aspect,
-			const Vec3f32 &eye = { 0, 0, 5 },
-			const Vec3f32 &center = { 0, 0, 0 },
-			f32 fov = f32(70_deg), f32 near = .1f,
-			const Vec3f32 &mask = { 1, 1, 1 },
-			const Vec3f32 &up = { 0, 1, 0 }
-		){
-			return {
-				Mat4x4f32::perspective(fov, aspect, near),
-				Mat4x4f32::lookAt(eye, center, up),
-				mask
-			};
-		}
-
-		static inline UniformBuffer lookDirectionProj(
-			f32 aspect,
-			const Vec3f32 &eye = { 0, 0, 5 },
-			const Vec3f32 &dir = { 0, 0, -1 },
-			f32 fov = f32(70_deg), f32 near = .1f,
-			const Vec3f32 &mask = { 1, 1, 1 },
-			const Vec3f32 &up = { 0, 1, 0 }
-		){
-			return {
-				Mat4x4f32::perspective(fov, aspect, near),
-				Mat4x4f32::lookDirection(eye, dir, up),
-				mask
-			};
-		}
-
 	};
 
 	//Create resources
@@ -89,29 +59,79 @@ struct TestViewportInterface : public ViewportInterface {
 
 		//Create primitive buffer
 
-		List<BufferAttributes> attrib{ { GPUFormat::RGB32f } };
+		List<BufferAttributes> attrib{ { 0, GPUFormat::RGB32f }, { 1, GPUFormat::RG32f } };
 
-		const List<Vec3f32> vboBuffer{
+		const List<Vec3f32> positionBuffer{
+
+			//Bottom
 			{ -1, -1, -1 }, { 1, -1, -1 },
-			{ 1, 1, -1 },	{ -1, 1, -1 },
-			{ -1, -1, 1 },	{ 1, -1, 1 },
-			{ 1, 1, 1 },	{ -1, 1, 1 }
+			{ 1, -1, 1 },	{ -1, -1, 1 },
+
+			//Top
+			{ -1, 1, -1 },  { 1, 1, -1 },
+			{ 1, 1, 1 },	{ -1, 1, 1 },
+
+			//Back
+			{ -1, -1, -1 }, { -1, 1, -1 },
+			{ 1, 1, -1 },	{ 1, -1, -1 },
+
+			//Front
+			{ -1, -1, 1 },  { -1, 1, 1 },
+			{ 1, 1, 1 },	{ 1, -1, 1 },
+
+			//Left
+			{ -1, -1, -1 }, { -1, -1, 1 },
+			{ -1, 1, 1 },	{ -1, 1, -1 },
+
+			//Right
+			{ 1, -1, -1 },  { 1, -1, 1 },
+			{ 1, 1, 1 },	{ 1, 1, -1 },
+		};
+
+		const List<Vec2f32> uvBuffer{
+
+			//Bottom
+			{ 0, 0 }, { 1, 0 },
+			{ 1, 1 }, { 0, 1 },
+
+			//Top
+			{ 0, 1 }, { 1, 1 },
+			{ 1, 0 }, { 0, 0 },
+
+			//Back
+			{ 0, 0 }, { 1, 0 },
+			{ 1, 1 }, { 0, 1 },
+
+			//Front
+			{ 0, 1 }, { 1, 1 },
+			{ 1, 0 }, { 0, 0 },
+
+			//Left
+			{ 0, 0 }, { 1, 0 },
+			{ 1, 1 }, { 0, 1 },
+
+			//Right
+			{ 0, 1 }, { 1, 1 },
+			{ 1, 0 }, { 0, 0 }
 		};
 
 		const List<u8> iboBuffer{
-			0,1,2, 2,3,0,			//Front
-			4,7,6, 6,5,4,			//Back
-			0,3,7, 7,4,0,			//Left
-			1,5,6, 6,2,1,			//Right
-			7,3,2, 2,6,7,			//Top
-			1,0,4, 4,5,1			//Bottom
+			0,3,2, 2,1,0,			//Bottom
+			4,5,6, 6,7,4,			//Top
+			8,11,10, 10,9,8,		//Back
+			12,13,14, 14,15,12,		//Front
+			16,19,18, 18,17,16,		//Left
+			20,21,22, 22,23,20		//Right
 		};
 
 		mesh = {
 			g, NAME("Test mesh"),
 			PrimitiveBuffer::Info(
-				BufferLayout(vboBuffer, attrib[0]),
-				BufferLayout(iboBuffer, GPUFormat::R8u)
+				{
+					BufferLayout(positionBuffer, attrib[0]),
+					BufferLayout(uvBuffer, attrib[1])
+				},
+				BufferLayout(iboBuffer, { 0, GPUFormat::R8u })
 			)
 		};
 
@@ -331,8 +351,15 @@ struct TestViewportInterface : public ViewportInterface {
 
 	//Helper functions
 
-	void updateCamera() {
-		UniformBuffer buffer = UniformBuffer::lookDirectionProj(res.cast<Vec2f32>().aspect(), eye);
+	void updateUniforms() {
+
+		UniformBuffer buffer = {
+			Mat4x4f32::perspective(f32(70_deg), res.cast<Vec2f32>().aspect(), 0.1f),
+			Mat4x4f32::lookDirection(eye, { 0, 0, -1 }, { 0, 1, 0 }),
+			Mat4x4f32::rotateZ(cubeRotation.x),								//TODO: Use transform instead
+			{ 1, 1, 1 }
+		};
+
 		memcpy(uniforms->getBuffer(), &buffer, sizeof(UniformBuffer));
 		uniforms->flush(0, sizeof(UniformBuffer));
 	}
@@ -341,7 +368,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 	void resize(const ViewportInfo*, const Vec2u32 &size) final override {
 		res = size;
-		updateCamera();
+		updateUniforms();
 		intermediate->onResize(size);
 		gui->resize(size);
 		swapchain->onResize(size);
@@ -388,10 +415,12 @@ struct TestViewportInterface : public ViewportInterface {
 					speed = oic::Math::clamp(speed * 1 + (delta / 1024), 0.5, 5.0);
 			}
 
-		if (d.any()) {
+		if (d.any())
 			eye += d * f32(dt * speed);
-			updateCamera();
-		}
+
+		cubeRotation += f32(5_deg * dt);
+		
+		updateUniforms();
 	}
 };
 

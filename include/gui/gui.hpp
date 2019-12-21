@@ -27,7 +27,7 @@ namespace igx {
 
 	private:
 
-		BufferAttributes vertexLayout = { GPUFormat::RG32f, GPUFormat::RG32f, GPUFormat::RGBA8 };	//vec2 pos, vec2 uv, vec4un8 color
+		BufferAttributes vertexLayout = { 0, GPUFormat::RG32f, GPUFormat::RG32f, GPUFormat::RGBA8 };	//vec2 pos, vec2 uv, vec4un8 color
 
 		PipelineLayout pipelineLayout = {
 			RegisterLayout(NAME("Input texture"), 0, SamplerType::SAMPLER_2D, 0, ShaderAccess::FRAGMENT),

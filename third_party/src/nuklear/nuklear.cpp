@@ -264,7 +264,7 @@ namespace igx {
 					g, NAME("Primitive buffer"),
 					PrimitiveBuffer::Info(
 						BufferLayout(data->vbo, vertexLayout),
-						BufferLayout(data->ibo, BufferAttributes(GPUFormat::R16u))
+						BufferLayout(data->ibo, BufferAttributes(0, GPUFormat::R16u))
 					)
 				};
 			}

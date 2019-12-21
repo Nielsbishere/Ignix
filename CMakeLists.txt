@@ -24,7 +24,8 @@ add_subdirectory(igxi)
 
 # Setup test data
 
-file(GLOB_RECURSE shaders "res/shaders/*")
+file(GLOB_RECURSE shaders "res/shaders/*.comp" "res/shaders/*.vert" "res/shaders/*.frag")
+file(GLOB_RECURSE shaderBinaries "res/shaders/*.spv")
 
 # Nuklear dependency
 
@@ -44,6 +45,7 @@ add_executable(
 	${depsCpp}
 	${shaders}
 	${testsCpp}
+	${shaderBinaries}
 	CMakeLists.txt
 	third_party/Nuklear/nuklear.h	# Add the output of nuklear
 )
@@ -61,6 +63,9 @@ source_group("Source" FILES ${ignisCpp})
 source_group("Deps headers" FILES ${depsHpp} third_party/Nuklear/nuklear.h)
 source_group("Deps source" FILES ${depsCpp})
 source_group("Shaders" FILES ${shaders})
+source_group("Shader binaries" FILES ${shaderBinaries})
+
+add_custom_command(TARGET ignix POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
 
 if(MSVC)
     target_compile_options(ignix PRIVATE /W4 /WX /MD /MP /wd26812 /wd4201)
