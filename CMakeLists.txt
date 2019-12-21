@@ -29,7 +29,7 @@ file(GLOB_RECURSE shaderBinaries "res/shaders/*.spv")
 
 # Nuklear dependency
 
-file(GLOB_RECURSE nuklear "third_party/Nuklear/src/*.h" "third_party/Nuklear/src/*.c")
+file(GLOB_RECURSE nuklear "third_party/Nuklear/src/*.h")
 
 add_library(nuklear STATIC ${nuklear})
 
