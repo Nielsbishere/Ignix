@@ -29,9 +29,10 @@ file(GLOB_RECURSE shaderBinaries "res/shaders/*.spv")
 
 # Nuklear dependency
 
-file(GLOB_RECURSE nuklear "third_party/Nuklear/src/*.h")
+file(GLOB_RECURSE nuklear "third_party/Nuklear/src/*.h" "third_party/Nuklear/src/*.c")
 
 add_library(nuklear STATIC ${nuklear})
+SET_TARGET_PROPERTIES(nuklear PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD_DEBUG True)
 
 add_custom_command(TARGET nuklear POST_BUILD COMMAND paq WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
 
