@@ -53,7 +53,7 @@ add_executable(
 set_property(TARGET ignix PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res")
 
 target_include_directories(ignix PRIVATE include)
-target_include_directories(ignix PRIVATE third_party/include)
+target_include_directories(ignix PRIVATE third_party)
 target_include_directories(ignix PRIVATE Ignis/include)
 target_include_directories(ignix PRIVATE Ignis/core2/include)
 target_link_libraries(ignix PRIVATE nuklear ignis ocore igxi)

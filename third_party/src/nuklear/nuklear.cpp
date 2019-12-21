@@ -16,7 +16,7 @@
 
 #define NK_IMPLEMENTATION
 
-#include "../../Nuklear/nuklear.h"
+#include "Nuklear/nuklear.h"
 #include "system/allocator.hpp"
 #include "types/enum.hpp"
 #include "input/input_device.hpp"
