@@ -10,6 +10,8 @@ namespace oic {
 
 namespace igx {
 
+	class UIWindow;
+
 	//Renders GUI into a framebuffer
 	//You create the GUI through this interface and pass this final UI to the present
 	//
@@ -36,7 +38,7 @@ namespace igx {
 
 		SetClearColor clearColor{};
 
-		//List<UIWindow> windows;
+		List<UIWindow*> windows;
 
 		List<Texture> textures;
 
@@ -116,14 +118,41 @@ namespace igx {
 		//Get the UI flags
 		inline Flags getFlags() const { return flags; }
 
-		////Get windows
+		//Windows
 
-		//inline usz size() const { return windows.size(); }
+		//Relinquish ownership over window and give it to this UI
+		inline bool addWindow(UIWindow *window) {
 
-		//inline UIWindow *begin() { return windows.data(); }
-		//inline UIWindow *end() { return begin() + size(); }
+			auto it = std::find(windows.begin(), windows.end(), window);
 
-		//inline UIWindow *operator[](usz i) { return begin() + i; }
+			if (it != windows.end())
+				return false;
+
+			windows.push_back(window);
+			return true;
+		}
+
+		//Reclaim ownership over window and remove it from the UI (no deletion)
+		inline bool removeWindow(UIWindow *window) {
+			
+			auto it = std::find(windows.begin(), windows.end(), window);
+
+			if (it == windows.end())
+				return false;
+
+			windows.erase(it);
+			return true;
+		}
+
+		//Delete the window and remove it from the UI
+		void deleteWindow(UIWindow *window);
+
+		inline usz size() const { return windows.size(); }
+
+		inline UIWindow **begin() { return windows.data(); }
+		inline UIWindow **end() { return begin() + size(); }
+
+		inline UIWindow *operator[](usz i) { return begin()[i]; }
 
 	};
 

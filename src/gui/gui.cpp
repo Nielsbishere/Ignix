@@ -1,6 +1,7 @@
 #include "gui/gui.hpp"
 #include "system/system.hpp"
 #include "system/local_file_system.hpp"
+#include "gui/ui_window.hpp"
 
 namespace igx {
 
@@ -146,7 +147,12 @@ namespace igx {
 			shouldRefresh = couldRefresh = false;
 
 		}
+	}
 
+	void GUI::deleteWindow(UIWindow *window) {
+
+		if (removeWindow(window))
+			delete window;
 	}
 
 }

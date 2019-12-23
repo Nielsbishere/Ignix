@@ -6,6 +6,7 @@
 #include "system/viewport_interface.hpp"
 #include "system/local_file_system.hpp"
 #include "gui/gui.hpp"
+#include "gui/ui_window.hpp"
 #include "types/mat.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
@@ -317,7 +318,11 @@ struct TestViewportInterface : public ViewportInterface {
 			EndFramebuffer()
 		);
 
+		//Setup GUI
+
 		gui = new GUI(g, intermediate);
+		gui->addWindow(new UIWindow("Test", { 50, 50 }, { 200, 350 }, { 200, 350 }));
+		gui->addWindow(new UIWindow("Test2", { 250, 250 }, { 200, 350 }, { 200, 350 }));
 
 		//Release the graphics instance for us until we need it again
 

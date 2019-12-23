@@ -23,9 +23,12 @@
 #include "input/mouse.hpp"
 #include "input/keyboard.hpp"
 #include "gui/gui.hpp"
+#include "gui/ui_window.hpp"
 #include "utils/math.hpp"
+#include "utils/timer.hpp"
 
 using namespace oic;
+using namespace igx;
 
 //Nuklear allocator
 
@@ -94,11 +97,19 @@ namespace igx {
 		nk_draw_null_texture nullTexture;
 
 		Buffer current, previous;
+
+		ns previousTime{};
 	};
 
 	//Handling creation and deletion
 
 	GUI::~GUI() {
+
+		for (auto w : windows)
+			delete w;
+
+		windows.clear();
+
 		if (data) {
 			nk_buffer_free(&data->drawCommands);
 			oic::System::allocator()->free(data->ctx);
@@ -371,6 +382,13 @@ namespace igx {
 		nk_clear(ctx);
 		nk_input_end(data->ctx);
 
+		f32 delta = f32(Timer::now() - data->previousTime) / 1_s;		//TODO: This should be called every frame
+
+		if (!data->previousTime) delta = 0;
+
+		ctx->delta_time_seconds = f32(delta);
+		data->previousTime = Timer::now();
+
 		//Do render
 
 		enum { EASY, NORMAL, HARD };
@@ -383,41 +401,71 @@ namespace igx {
 			"Small biome"
 		};
 
-		if (nk_begin(ctx, "Show", nk_rect(50, 50, 300, 350),
-					 NK_WINDOW_BORDER|NK_WINDOW_SCALABLE|NK_WINDOW_MOVABLE|NK_WINDOW_TITLE)) {
+		for (UIWindow *w : windows) {
 
-			// fixed widget pixel width
-			nk_layout_row_static(ctx, 30, 150, 1);
-			if (nk_button_label(ctx, "Play"))
-				oic::System::log()->debug("Hi");
+			if (!w->visible())
+				continue;
 
-			// fixed widget window ratio width
-			nk_layout_row_dynamic(ctx, 30, 2);
-			if (nk_option_label(ctx, "Easy", op == EASY)) op = EASY;
-			if (nk_option_label(ctx, "Normal", op == NORMAL)) op = NORMAL;
-			if (nk_option_label(ctx, "Hard", op == HARD)) op = HARD;
+			using Flags = UIWindow::Flags;
+			Flags flag = w->getFlags();
+			nk_flags nkFlags = {};
 
-			nk_layout_row_dynamic(ctx, 30, 2);
-			nk_checkbox_label(ctx, "Silver", active);
-			nk_checkbox_label(ctx, "Bronze", active + 1);
-			nk_checkbox_label(ctx, "Gold", active + 2);
+			if (!(flag & Flags::INPUT))			nkFlags |= NK_WINDOW_NO_INPUT;
+			if (!(flag & Flags::SCROLL))		nkFlags |= NK_WINDOW_NO_SCROLLBAR;
+			if (flag & Flags::MOVE)				nkFlags |= NK_WINDOW_MOVABLE;
+			if (flag & Flags::SCALE)			nkFlags |= NK_WINDOW_SCALABLE;
+			if (flag & Flags::CLOSE)			nkFlags |= NK_WINDOW_CLOSABLE;
+			if (flag & Flags::MINIMIZE)			nkFlags |= NK_WINDOW_MINIMIZABLE;
+			if (flag & Flags::HAS_TITLE)		nkFlags |= NK_WINDOW_TITLE;
+			if (flag & Flags::BORDER)			nkFlags |= NK_WINDOW_BORDER;
+			if (flag & Flags::SCROLL_AUTO_HIDE)	nkFlags |= NK_WINDOW_SCROLL_AUTO_HIDE;
 
-			nk_layout_row_dynamic(ctx, 30, 2);
-			nk_combobox(ctx, names, int(sizeof(names) / sizeof(names[0])), &selected, 30, nk_vec2(150, 200));
+			struct nk_rect rect = nk_rect(w->getPos().x, w->getPos().y, w->getDim().x, w->getDim().y);
 
-			// custom widget pixel width
-			nk_layout_row_begin(ctx, NK_STATIC, 30, 2);
-			{
-				nk_layout_row_push(ctx, 50);
-				nk_label(ctx, "Volume:", NK_TEXT_LEFT);
-				nk_layout_row_push(ctx, 110);
-				nk_slider_float(ctx, 0, &value, 1.0f, 0.1f);
-				nk_progress(ctx, &test, 100, 1);
+			if (nk_window *wnd = nk_begin(ctx, w->getTitle().c_str(), rect, nkFlags)) {
+
+				Vec2f32 dim = w->clampBounds({ wnd->bounds.w, wnd->bounds.h });
+
+				wnd->bounds.w = dim.x;
+				wnd->bounds.h = dim.y;
+
+				w->updateLocation(Vec2f32(wnd->bounds.x, wnd->bounds.y), dim);
+
+				// fixed widget pixel width
+				nk_layout_row_static(ctx, 30, 150, 1);
+				if (nk_button_label(ctx, "Play"))
+					oic::System::log()->debug("Hi");
+
+				// fixed widget window ratio width
+				nk_layout_row_dynamic(ctx, 30, 2);
+				if (nk_option_label(ctx, "Easy", op == EASY)) op = EASY;
+				if (nk_option_label(ctx, "Normal", op == NORMAL)) op = NORMAL;
+				if (nk_option_label(ctx, "Hard", op == HARD)) op = HARD;
+
+				nk_layout_row_dynamic(ctx, 30, 2);
+				nk_checkbox_label(ctx, "Silver", active);
+				nk_checkbox_label(ctx, "Bronze", active + 1);
+				nk_checkbox_label(ctx, "Gold", active + 2);
+
+				nk_layout_row_dynamic(ctx, 30, 2);
+				nk_combobox(ctx, names, int(sizeof(names) / sizeof(names[0])), &selected, 30, nk_vec2(150, 200));
+
+				// custom widget pixel width
+				nk_layout_row_begin(ctx, NK_STATIC, 30, 2);
+				{
+					nk_layout_row_push(ctx, 50);
+					nk_label(ctx, "Volume:", NK_TEXT_LEFT);
+					nk_layout_row_push(ctx, 110);
+					nk_slider_float(ctx, 0, &value, 1.0f, 0.1f);
+					nk_progress(ctx, &test, 100, 1);
+				}
+				nk_layout_row_end(ctx);
+				nk_end(ctx);
 			}
-			nk_layout_row_end(ctx);
+			else
+				w->setVisible(false);
 		}
 
-		nk_end(ctx);
 		nk_input_begin(ctx);
 
 		//Detect if different
