@@ -321,8 +321,8 @@ struct TestViewportInterface : public ViewportInterface {
 		//Setup GUI
 
 		gui = new GUI(g, intermediate);
-		gui->addWindow(new UIWindow("Test", { 50, 50 }, { 200, 350 }, { 200, 350 }));
-		gui->addWindow(new UIWindow("Test2", { 250, 250 }, { 200, 350 }, { 200, 350 }));
+		gui->addWindow(new UIWindow("Test", 0, { 50, 50 }, { 200, 350 }, { 200, 350 }));
+		gui->addWindow(new UIWindow("Test", 1, { 250, 250 }, { 200, 350 }, { 200, 350 }));
 
 		//Release the graphics instance for us until we need it again
 

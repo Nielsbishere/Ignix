@@ -294,7 +294,8 @@ namespace igx {
 
 	void GUI::draw() {
 
-		commands->add(BindPrimitiveBuffer(data->primitiveBuffer));
+		if(data->primitiveBuffer)
+			commands->add(BindPrimitiveBuffer(data->primitiveBuffer));
 
 		const nk_draw_command *cmd {};
 		nk_draw_index offset {};
@@ -391,24 +392,31 @@ namespace igx {
 
 		//Do render
 
-		enum { EASY, NORMAL, HARD };
-		static int op = EASY, active[3]{ 1, 0, 1 }, selected{};
-		static float value = 0.6f;
-		static usz test{};
-
 		static c8 const * names[] = {
 			"Large biome",
 			"Small biome"
 		};
 
-		for (UIWindow *w : windows) {
+		enum Difficulty : u8 { EASY, NORMAL, HARD };
 
-			if (!w->visible())
-				continue;
+		struct UIData {
+			int op = 0, active[3] { 1, 0, 1 }, selected{};
+			float value = 0.6f;
+			usz test{};
+		};
+
+		static HashMap<UIWindow*, UIData> uiData;
+
+		List<usz> marked;
+		marked.reserve(windows.size());
+
+		usz i{};
+
+		for (UIWindow *w : windows) {
 
 			using Flags = UIWindow::Flags;
 			Flags flag = w->getFlags();
-			nk_flags nkFlags = {};
+			nk_flags nkFlags{};
 
 			if (!(flag & Flags::INPUT))			nkFlags |= NK_WINDOW_NO_INPUT;
 			if (!(flag & Flags::SCROLL))		nkFlags |= NK_WINDOW_NO_SCROLLBAR;
@@ -422,14 +430,38 @@ namespace igx {
 
 			struct nk_rect rect = nk_rect(w->getPos().x, w->getPos().y, w->getDim().x, w->getDim().y);
 
-			if (nk_window *wnd = nk_begin(ctx, w->getTitle().c_str(), rect, nkFlags)) {
+			if (nk_window *wnd = nk_add_window(ctx, w->getId(), w->getTitle().c_str(), rect, nkFlags)) {
 
+				if (!nk_window_has_contents(wnd)) {
+
+					if (wnd->flags & NK_WINDOW_CLOSED) {
+						delete w;
+						marked.insert(marked.begin(), i);
+					}
+					else
+						w->setVisible(false);
+
+					nk_end(ctx);
+					++i;
+					continue;
+				}
+
+				w->setVisible(true);
+
+				//TODO: Do this properly; it jitters
 				Vec2f32 dim = w->clampBounds({ wnd->bounds.w, wnd->bounds.h });
 
 				wnd->bounds.w = dim.x;
 				wnd->bounds.h = dim.y;
 
 				w->updateLocation(Vec2f32(wnd->bounds.x, wnd->bounds.y), dim);
+
+				auto &dat = uiData[w];
+				auto &op = dat.op;
+				auto &active = dat.active;
+				auto &selected = dat.selected;
+				auto &value = dat.value;
+				auto &test = dat.test;
 
 				// fixed widget pixel width
 				nk_layout_row_static(ctx, 30, 150, 1);
@@ -460,18 +492,24 @@ namespace igx {
 					nk_progress(ctx, &test, 100, 1);
 				}
 				nk_layout_row_end(ctx);
-				nk_end(ctx);
 			}
-			else
-				w->setVisible(false);
+
+			nk_end(ctx);
+			++i;
 		}
 
-		nk_input_begin(ctx);
+		for (usz j : marked)
+			windows.erase(windows.begin() + j);
 
 		//Detect if different
 
 		bool refresh = data->previous != data->current;
 		data->previous = data->current;
+
+		//Begin input
+
+		nk_input_begin(ctx);
+
 		return refresh;
 	}
 

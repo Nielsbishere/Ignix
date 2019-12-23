@@ -6,22 +6,22 @@ using namespace oic;
 namespace igx {
 
 	UIWindow::UIWindow(
-		const String &name, const Vec2f32 &pos,
+		const String &name, const u32 id, const Vec2f32 &pos,
 		const Vec2f32 &dim, Flags flags
 	):
-		name(name), pos(pos), dim(dim), flags(flags) {}
+		name(name), pos(pos), dim(dim), id(id), flags(flags) {}
 
 	UIWindow::UIWindow(
-		const String &name, const Vec2f32 &pos, const Vec2f32 &dim,
+		const String &name, const u32 id, const Vec2f32 &pos, const Vec2f32 &dim,
 		const Vec2f32 &min, Flags flags
 	):
-		name(name), pos(pos), dim(dim), flags(flags) { setMin(min); }
+		name(name), pos(pos), dim(dim), id(id), flags(flags) { setMin(min); }
 
 	UIWindow::UIWindow(
-		const String &name, const Vec2f32 &pos, const Vec2f32 &dim, 
+		const String &name, const u32 id, const Vec2f32 &pos, const Vec2f32 &dim, 
 		const Vec2f32 &min, const Vec2f32 &max, Flags flags
 	):
-		name(name), pos(pos), dim(dim), flags(flags) { setBounds(min, max); }
+		name(name), pos(pos), dim(dim), id(id), flags(flags) { setBounds(min, max); }
 
 
 	Vec2f32 UIWindow::clampBounds(Vec2f32 bounds) const {

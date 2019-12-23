@@ -47,25 +47,27 @@ namespace igx {
 
 		String name;
 
+		u32 id;
+
 		Flags flags;
 
 	public:
 
 		//Create a window at a pixel position
 		UIWindow(
-			const String &name, const Vec2f32 &pos,
+			const String &name, const u32 id, const Vec2f32 &pos,
 			const Vec2f32 &dim, Flags flags = DEFAULT
 		);
 
 		//Create a window at a pixel position with a minimum size
 		UIWindow(
-			const String &name, const Vec2f32 &pos, const Vec2f32 &dim,
+			const String &name, const u32 id, const Vec2f32 &pos, const Vec2f32 &dim,
 			const Vec2f32 &min, Flags flags = DEFAULT
 		);
 
 		//Create a window at a pixel position with a minimum and maximum size
 		UIWindow(
-			const String &name, const Vec2f32 &pos, const Vec2f32 &dim, 
+			const String &name, const u32 id, const Vec2f32 &pos, const Vec2f32 &dim, 
 			const Vec2f32 &min, const Vec2f32 &max, Flags flags = DEFAULT
 		);
 
@@ -98,6 +100,7 @@ namespace igx {
 
 		inline String getTitle() const { return name; }
 		inline Flags getFlags() const { return flags; }
+		inline u32 getId() const { return id; }
 
 		inline bool visible() const { return flags & VISIBLE; }
 
