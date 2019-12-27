@@ -1,9 +1,9 @@
 [submodule "ignis"]
 	path = ignis
-	url = https://github.com/Nielsbishere/ignis
+url=https://github.com/Oxsomi/ignis
 [submodule "igxi"]
 	path = igxi
-	url = https://github.com/Nielsbishere/igxi
+url=https://github.com/Oxsomi/igxi
 [submodule "third_party/Nuklear"]
 	path = third_party/Nuklear
 	url = https://github.com/Nielsbishere/Nuklear
