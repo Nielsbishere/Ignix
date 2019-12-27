@@ -23,11 +23,12 @@
 #include "input/mouse.hpp"
 #include "input/keyboard.hpp"
 #include "gui/gui.hpp"
-#include "gui/ui_window.hpp"
+#include "gui/window.hpp"
 #include "utils/math.hpp"
 #include "utils/timer.hpp"
 
 using namespace oic;
+using namespace igx::ui;
 using namespace igx;
 
 //Nuklear allocator
@@ -82,7 +83,7 @@ namespace igx {
 
 	struct GUI::Data {
 
-		static constexpr usz MAX_MEMORY = 8_MiB;
+		static constexpr usz MAX_MEMORY = 32_KiB;
 
 		GPUBuffer ibo, vbo;
 		Texture textureAtlas;
@@ -97,6 +98,7 @@ namespace igx {
 		nk_draw_null_texture nullTexture;
 
 		Buffer current, previous;
+		usz usedPrevious{};
 
 		ns previousTime{};
 	};
@@ -104,11 +106,6 @@ namespace igx {
 	//Handling creation and deletion
 
 	GUI::~GUI() {
-
-		for (auto w : windows)
-			delete w;
-
-		windows.clear();
 
 		if (data) {
 			nk_buffer_free(&data->drawCommands);
@@ -165,6 +162,56 @@ namespace igx {
 		//Init nk
 
 		nk_init_fixed(data->ctx, data->current.data(), Data::MAX_MEMORY, &data->font->handle);
+
+		/* TODO: Style
+		auto &style = data->ctx->style;
+
+		auto background = nk_rgb(0x30, 0x30, 0x30);
+		auto active = nk_rgb(0x40, 0x40, 0x40);
+		auto border = nk_rgb(0x28, 0x28, 0x28);
+		auto text = nk_rgb(0x87, 0xCE, 0xEB);
+		auto textHover = nk_rgb(0x2D, 0xAD, 0xE4);
+		auto textActive = nk_rgb(0x13, 0xBF, 0xFF);
+
+		style.text.color = text;
+
+		style.window.background = background;
+		style.window.border_color = border;
+
+		style.button.border_color = border;
+		style.button.text_active = textActive;
+		style.button.text_hover = textHover;
+		style.button.text_background = background;
+		style.button.text_normal = text;
+		style.button.active.data.color = active;
+
+		style.contextual_button.border_color = border;
+		style.contextual_button.text_active = textActive;
+		style.contextual_button.text_hover = textHover;
+		style.contextual_button.text_background = background;
+		style.contextual_button.text_normal = text;
+		style.contextual_button.active.data.color = active;
+
+		style.menu_button.border_color = border;
+		style.menu_button.text_active = textActive;
+		style.menu_button.text_hover = textHover;
+		style.menu_button.text_background = background;
+		style.menu_button.text_normal = text;
+		style.menu_button.active.data.color = active;
+
+		struct nk_style_toggle option;
+		struct nk_style_toggle checkbox;
+		struct nk_style_selectable selectable;
+		struct nk_style_slider slider;
+		struct nk_style_progress progress;
+		struct nk_style_property property;
+		struct nk_style_edit edit;
+		struct nk_style_chart chart;
+		struct nk_style_scrollbar scrollh;
+		struct nk_style_scrollbar scrollv;
+		struct nk_style_tab tab;
+		struct nk_style_combo combo;
+		struct nk_style_window window;*/
 
 	}
 
@@ -374,23 +421,7 @@ namespace igx {
 
 	//Nuklear test
 
-	bool GUI::prepareDrawData() {
-
-		auto *ctx = data->ctx;
-
-		//Clear previous and capture input
-
-		nk_clear(ctx);
-		nk_input_end(data->ctx);
-
-		f32 delta = f32(Timer::now() - data->previousTime) / 1_s;		//TODO: This should be called every frame
-
-		if (!data->previousTime) delta = 0;
-
-		ctx->delta_time_seconds = f32(delta);
-		data->previousTime = Timer::now();
-
-		//Do render
+	void GUI::renderWindows(List<Window*> &ws) {
 
 		static c8 const * names[] = {
 			"Large biome",
@@ -403,18 +434,21 @@ namespace igx {
 			int op = 0, active[3] { 1, 0, 1 }, selected{};
 			float value = 0.6f;
 			usz test{};
+			int selected0{};
 		};
 
-		static HashMap<UIWindow*, UIData> uiData;
+		static HashMap<Window*, UIData> uiData;
+
+		auto *ctx = data->ctx;
 
 		List<usz> marked;
-		marked.reserve(windows.size());
+		marked.reserve(ws.size());
 
 		usz i{};
 
-		for (UIWindow *w : windows) {
+		for (Window *w : ws) {
 
-			using Flags = UIWindow::Flags;
+			using Flags = Window::Flags;
 			Flags flag = w->getFlags();
 			nk_flags nkFlags{};
 
@@ -448,11 +482,7 @@ namespace igx {
 
 				w->setVisible(true);
 
-				//TODO: Do this properly; it jitters
-				Vec2f32 dim = w->clampBounds({ wnd->bounds.w, wnd->bounds.h });
-
-				wnd->bounds.w = dim.x;
-				wnd->bounds.h = dim.y;
+				Vec2f32 dim = { wnd->bounds.w, wnd->bounds.h };
 
 				w->updateLocation(Vec2f32(wnd->bounds.x, wnd->bounds.y), dim);
 
@@ -468,43 +498,89 @@ namespace igx {
 				if (nk_button_label(ctx, "Play"))
 					oic::System::log()->debug("Hi");
 
+				if (nk_tree_push_id(ctx, NK_TREE_TAB, "application", NK_MINIMIZED, 0)) {
+
+					if (nk_tree_element_push_id(ctx, NK_TREE_NODE, "test", NK_MINIMIZED, &dat.selected0, 0)) {
+						nk_tree_element_pop(ctx);
+					}
+
+					nk_tree_pop(ctx);
+				}
+
 				// fixed widget window ratio width
-				nk_layout_row_dynamic(ctx, 30, 2);
+				nk_layout_row_static(ctx, 30, 75, 2);
 				if (nk_option_label(ctx, "Easy", op == EASY)) op = EASY;
 				if (nk_option_label(ctx, "Normal", op == NORMAL)) op = NORMAL;
 				if (nk_option_label(ctx, "Hard", op == HARD)) op = HARD;
 
-				nk_layout_row_dynamic(ctx, 30, 2);
+				nk_layout_row_static(ctx, 30, 75, 2);
 				nk_checkbox_label(ctx, "Silver", active);
 				nk_checkbox_label(ctx, "Bronze", active + 1);
 				nk_checkbox_label(ctx, "Gold", active + 2);
 
-				nk_layout_row_dynamic(ctx, 30, 2);
+				nk_layout_row_static(ctx, 30, 150, 1);
 				nk_combobox(ctx, names, int(sizeof(names) / sizeof(names[0])), &selected, 30, nk_vec2(150, 200));
 
 				// custom widget pixel width
-				nk_layout_row_begin(ctx, NK_STATIC, 30, 2);
+				nk_layout_row_begin(ctx, NK_DYNAMIC, 30, 2);
 				{
-					nk_layout_row_push(ctx, 50);
+					nk_layout_row_push(ctx, 0.25f);
 					nk_label(ctx, "Volume:", NK_TEXT_LEFT);
-					nk_layout_row_push(ctx, 110);
-					nk_slider_float(ctx, 0, &value, 1.0f, 0.1f);
-					nk_progress(ctx, &test, 100, 1);
+					nk_layout_row_push(ctx, 0.75f);
+					nk_slider_float(ctx, 0, &value, 1.0f, 0.01f);
 				}
 				nk_layout_row_end(ctx);
+
+				nk_layout_row_static(ctx, 30, 150, 1);
+				nk_progress(ctx, &test, 100, 1);
 			}
 
 			nk_end(ctx);
+
 			++i;
 		}
 
 		for (usz j : marked)
-			windows.erase(windows.begin() + j);
+			ws.erase(ws.begin() + j);
+
+	}
+
+	bool GUI::prepareDrawData() {
+
+		auto *ctx = data->ctx;
+
+		//Clear previous and capture input
+
+		nk_clear(ctx);
+		nk_input_end(data->ctx);
+
+		f32 delta = f32(Timer::now() - data->previousTime) / 1_s;		//TODO: This should be called every frame
+
+		if (!data->previousTime) delta = 0;
+
+		ctx->delta_time_seconds = f32(delta);
+		data->previousTime = Timer::now();
+
+		//Do render
+
+		renderWindows(windows);
 
 		//Detect if different
 
-		bool refresh = data->previous != data->current;
-		data->previous = data->current;
+		usz needed = ctx->memory.needed;
+
+		bool refresh =
+			data->previous.size() != needed || 
+			memcmp(data->previous.data(), data->current.data(), needed);
+
+		if (refresh) {
+
+			if (data->usedPrevious < needed)
+				data->previous.resize(needed);
+
+			memcpy(data->previous.data(), data->current.data(), needed);
+			data->usedPrevious = needed;
+		}
 
 		//Begin input
 

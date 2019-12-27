@@ -1,9 +1,9 @@
 #include "gui/gui.hpp"
 #include "system/system.hpp"
 #include "system/local_file_system.hpp"
-#include "gui/ui_window.hpp"
+#include "gui/window.hpp"
 
-namespace igx {
+namespace igx::ui {
 
 	GUI::GUI(Graphics &g, const SetClearColor &clearColor, usz commandListSize) :
 		clearColor(clearColor), commandListSize(commandListSize),
@@ -48,6 +48,8 @@ namespace igx {
 		oicAssert("Couldn't find pass through vertex shader", oic::System::files()->read("./shaders/pass_through.vert.spv", vertShader));
 		oicAssert("Couldn't find pass through fragment shader", oic::System::files()->read("./shaders/pass_through.frag.spv", fragShader));
 
+		bool hasFb = !(flags & Flags::OWNS_FRAMEBUFFER);
+
 		uiShader = {
 			g, NAME("GUI pipeline"),
 			Pipeline::Info(
@@ -58,7 +60,7 @@ namespace igx {
 					{ ShaderStage::FRAGMENT, fragShader }
 				},
 				pipelineLayout,
-				MSAA(msaa, .2f),
+				MSAA(hasFb ? target->getInfo().samples : msaa, .2f),
 				DepthStencil(),
 				Rasterizer(CullMode::NONE),
 				BlendState::alphaBlend()
@@ -147,12 +149,6 @@ namespace igx {
 			shouldRefresh = couldRefresh = false;
 
 		}
-	}
-
-	void GUI::deleteWindow(UIWindow *window) {
-
-		if (removeWindow(window))
-			delete window;
 	}
 
 }

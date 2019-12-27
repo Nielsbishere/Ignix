@@ -6,12 +6,13 @@
 #include "system/viewport_interface.hpp"
 #include "system/local_file_system.hpp"
 #include "gui/gui.hpp"
-#include "gui/ui_window.hpp"
+#include "gui/window.hpp"
 #include "types/mat.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
 #include "utils/math.hpp"
 
+using namespace igx::ui;
 using namespace igx;
 using namespace oic;
 
@@ -321,8 +322,9 @@ struct TestViewportInterface : public ViewportInterface {
 		//Setup GUI
 
 		gui = new GUI(g, intermediate);
-		gui->addWindow(new UIWindow("Test", 0, { 50, 50 }, { 200, 350 }, { 200, 350 }));
-		gui->addWindow(new UIWindow("Test", 1, { 250, 250 }, { 200, 350 }, { 200, 350 }));
+		
+		gui->addWindow(new Window("", 0, {}, { 200, 350 }, Window::STATIC_NO_MENU));
+		gui->addWindow(new Window("Test", 1, { 50, 50 }, { 200, 350 }));
 
 		//Release the graphics instance for us until we need it again
 

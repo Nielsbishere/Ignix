@@ -1,21 +1,19 @@
 #pragma once
 #include "helpers/graphics_object_ref.hpp"
 #include "utils/hash.hpp"
-//#include "ui_window.hpp"
+#include "window_container.hpp"
 
 namespace oic {
 	class InputDevice;
 	using InputHandle = u32;
 }
 
-namespace igx {
-
-	class UIWindow;
+namespace igx::ui {
 
 	//Renders GUI into a framebuffer
 	//You create the GUI through this interface and pass this final UI to the present
 	//
-	class GUI {
+	class GUI : public WindowContainer {
 
 	public:
 
@@ -37,8 +35,6 @@ namespace igx {
 		};
 
 		SetClearColor clearColor{};
-
-		List<UIWindow*> windows;
 
 		List<Texture> textures;
 
@@ -64,6 +60,7 @@ namespace igx {
 
 		void bakePrimitives(Graphics &g);	//Fills vertex/index buffer
 		bool prepareDrawData();				//Returns true if it should bake primitive data
+		void renderWindows(List<Window*> &windows);
 		void draw();						//Called to fill the command list
 
 		void initData(Graphics &g);			//Init implementation dependent data and descriptors/textures
@@ -117,42 +114,6 @@ namespace igx {
 
 		//Get the UI flags
 		inline Flags getFlags() const { return flags; }
-
-		//Windows
-
-		//Relinquish ownership over window and give it to this UI
-		inline bool addWindow(UIWindow *window) {
-
-			auto it = std::find(windows.begin(), windows.end(), window);
-
-			if (it != windows.end())
-				return false;
-
-			windows.push_back(window);
-			return true;
-		}
-
-		//Reclaim ownership over window and remove it from the UI (no deletion)
-		inline bool removeWindow(UIWindow *window) {
-			
-			auto it = std::find(windows.begin(), windows.end(), window);
-
-			if (it == windows.end())
-				return false;
-
-			windows.erase(it);
-			return true;
-		}
-
-		//Delete the window and remove it from the UI
-		void deleteWindow(UIWindow *window);
-
-		inline usz size() const { return windows.size(); }
-
-		inline UIWindow **begin() { return windows.data(); }
-		inline UIWindow **end() { return begin() + size(); }
-
-		inline UIWindow *operator[](usz i) { return begin()[i]; }
 
 	};
 
