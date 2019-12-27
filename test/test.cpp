@@ -37,14 +37,14 @@ struct TestViewportInterface : public ViewportInterface {
 	Vec3f32 eye{ 3, 3, 7 };
 	f64 speed = 2;
 
-	Vec3f32 cubePosition, cubeRotation, cubeScale;
+	Vec3f32 cubePosition = { 2, 2, 2 }, cubeRotation, cubeScale = { 1, 0.5f, 1 };
 
 	//TODO: Demonstrate multiple windows
 	//TODO: Use render targets
 
 	//Data on the GPU (test shader)
 	struct UniformBuffer {
-		Mat4x4f32 proj, view, world;
+		Mat4x4f32 pvw;
 		Vec3f32 mask;
 	};
 
@@ -281,8 +281,7 @@ struct TestViewportInterface : public ViewportInterface {
 				MSAA(intermediate->getInfo().samples, .2f),
 				DepthStencil::depth()
 
-				//TODO:
-				//Parent pipeline / allow parenting (optional)
+				//TODO: Parent pipeline / allow parenting (optional)
 			)
 		};
 
@@ -360,10 +359,12 @@ struct TestViewportInterface : public ViewportInterface {
 
 	void updateUniforms() {
 
+		auto p = Mat4x4f32::perspective(f32(70_deg), res.cast<Vec2f32>().aspect(), 0.1f, 100.f);
+		auto v = Mat4x4f32::lookDirection(eye, { 0, 0, -1 }, { 0, 1, 0 });
+		auto w = Mat4x4f32::transform(cubePosition, cubeRotation, cubeScale);
+
 		UniformBuffer buffer = {
-			Mat4x4f32::perspective(f32(70_deg), res.cast<Vec2f32>().aspect(), 0.1f),
-			Mat4x4f32::lookDirection(eye, { 0, 0, -1 }, { 0, 1, 0 }),
-			Mat4x4f32::rotateZ(cubeRotation.x),								//TODO: Use transform instead
+			p * v * w,
 			{ 1, 1, 1 }
 		};
 
@@ -427,7 +428,8 @@ struct TestViewportInterface : public ViewportInterface {
 
 		cubeRotation += f32(5_deg * dt);
 		
-		updateUniforms();
+		if(res.neq(0).all())
+			updateUniforms();
 	}
 };
 

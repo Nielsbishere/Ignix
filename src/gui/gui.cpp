@@ -45,8 +45,8 @@ namespace igx::ui {
 		};
 
 		Buffer vertShader, fragShader;
-		oicAssert("Couldn't find pass through vertex shader", oic::System::files()->read("./shaders/pass_through.vert.spv", vertShader));
-		oicAssert("Couldn't find pass through fragment shader", oic::System::files()->read("./shaders/pass_through.frag.spv", fragShader));
+		oicAssert("Couldn't find pass through vertex shader", oic::System::files()->read("./shaders/gui.vert.spv", vertShader));
+		oicAssert("Couldn't find pass through fragment shader", oic::System::files()->read("./shaders/gui.frag.spv", fragShader));
 
 		bool hasFb = !(flags & Flags::OWNS_FRAMEBUFFER);
 

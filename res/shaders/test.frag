@@ -7,7 +7,7 @@ out layout(location=0) vec4 color;
 layout(binding=0) uniform sampler2D test;
 
 layout(binding=0, std140) uniform Test {
-	mat4 p, v, w;
+	mat4 pvw;
 	vec3 mask;
 };
 
