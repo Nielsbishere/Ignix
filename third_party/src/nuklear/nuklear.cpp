@@ -138,14 +138,14 @@ namespace igx {
 		int width{}, height{};
 		u8 *atlasData = (u8*) nk_font_atlas_bake(&atlas, &width, &height, NK_FONT_ATLAS_ALPHA8);
 
-		Texture::Info info(
+		Texture::Info tinfo(
 			Vec2u16{ u16(width), u16(height) }, GPUFormat::R8, GPUMemoryUsage::LOCAL, 1, 1
 		);
 
-		info.init({ Buffer(atlasData, atlasData + usz(width) * height) });
+		tinfo.init({ Buffer(atlasData, atlasData + usz(width) * height) });
 
 		data->textureAtlas = {
-			g, NAME("Atlas texture"), info
+			g, NAME("Atlas texture"), tinfo
 		};
 
 		DescriptorsSubresources resources;
