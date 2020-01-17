@@ -10,6 +10,12 @@ namespace oic {
 
 namespace igx::ui {
 
+	//All info needed on the GPU
+	struct GUIInfo {
+		Vec2u32 res;
+		u32 enableSubpixelRendering;
+	};
+
 	//Renders GUI into a framebuffer
 	//You create the GUI through this interface and pass this final UI to the present
 	//
@@ -18,20 +24,23 @@ namespace igx::ui {
 	public:
 
 		enum Flags : u8 {
-			NONE = 0,						//Clears framebuffer and will only redraw when required
-			OWNS_FRAMEBUFFER = 1,			//Whether the UI owns the framebuffer; determines if it should clear and resize itself
-			OWNS_COMMAND_LIST = 2			//Whether the UI owns the command list; (if it should be cleared 
+			NONE = 0,							//Clears framebuffer and will only redraw when required
+			OWNS_FRAMEBUFFER = 1,				//Whether the UI owns the framebuffer; determines if it should clear and resize itself
+			OWNS_COMMAND_LIST = 2,				//Whether the UI owns the command list; (if it should be cleared 
+			DISABLE_SUBPIXEL_RENDERING = 4		//Whether subpixel rendering should be disabled
 		};
 
-		static constexpr u32 msaa = 8;
+		static constexpr u32 msaa = 2;
 
 	private:
+
+		GUIInfo info;
 
 		BufferAttributes vertexLayout = { 0, GPUFormat::RG32f, GPUFormat::RG32f, GPUFormat::RGBA8 };	//vec2 pos, vec2 uv, vec4un8 color
 
 		PipelineLayout pipelineLayout = {
 			RegisterLayout(NAME("Input texture"), 0, SamplerType::SAMPLER_2D, 0, ShaderAccess::FRAGMENT),
-			RegisterLayout(NAME("Res buffer"), 1, GPUBufferType::UNIFORM, 0, ShaderAccess::VERTEX, 8)
+			RegisterLayout(NAME("GUI Info"), 1, GPUBufferType::UNIFORM, 0, ShaderAccess::VERTEX_FRAGMENT, sizeof(GUIInfo))
 		};
 
 		SetClearColor clearColor{};
@@ -45,7 +54,9 @@ namespace igx::ui {
 		Sampler sampler;
 
 		Pipeline uiShader;
-		GPUBuffer resolution;
+		GPUBuffer guiDataBuffer;
+
+		Graphics *graphics;
 
 		struct Data;
 		Data *data{};						//Implementation dependent data

@@ -139,7 +139,7 @@ namespace igx {
 		u8 *atlasData = (u8*) nk_font_atlas_bake(&atlas, &width, &height, NK_FONT_ATLAS_ALPHA8);
 
 		Texture::Info info(
-			Vec2u32{ u32(width), u32(height) }, GPUFormat::R8, GPUMemoryUsage::LOCAL, 1, 1
+			Vec2u16{ u16(width), u16(height) }, GPUFormat::R8, GPUMemoryUsage::LOCAL, 1, 1
 		);
 
 		info.init({ Buffer(atlasData, atlasData + usz(width) * height) });
@@ -150,7 +150,7 @@ namespace igx {
 
 		DescriptorsSubresources resources;
 		resources[0] = { sampler, data->textureAtlas };
-		resources[1] = { resolution, 0 };
+		resources[1] = { guiDataBuffer, 0 };
 
 		descriptors = {
 			g, NAME("Atlas descriptor"),
@@ -354,7 +354,13 @@ namespace igx {
 			auto r = cmd->clip_rect;
 
 			commands->add(
-				r.w == 16384 ? SetScissor() : SetScissor({ u32(r.w), u32(r.h) }, { i32(r.x), i32(r.y) }),
+
+				r.w == 16384 ? SetScissor()
+				: SetScissor(
+					Vec2u32(u32(r.w), u32(r.h)), 
+					Vec2i32(i32(r.x), i32(r.y))
+				),
+
 				DrawInstanced::indexed(cmd->elem_count, 1, offset)
 			);
 

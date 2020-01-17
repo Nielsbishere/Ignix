@@ -39,6 +39,8 @@ struct TestViewportInterface : public ViewportInterface {
 
 	Vec3f32 cubePosition = { 2, 2, 2 }, cubeRotation, cubeScale = { 1, 0.5f, 1 };
 
+	static constexpr u8 msaa = 2;
+
 	//TODO: Demonstrate multiple windows
 	//TODO: Use render targets
 
@@ -55,7 +57,7 @@ struct TestViewportInterface : public ViewportInterface {
 		intermediate = {
 			g, NAME("Framebuffer"),
 			Framebuffer::Info(
-				{ GPUFormat::RGBA8 }, DepthFormat::D32, false, 8
+				{ GPUFormat::RGBA8 }, DepthFormat::D32, false, msaa
 			)
 		};
 
@@ -182,7 +184,7 @@ struct TestViewportInterface : public ViewportInterface {
 		computeOutput = {
 			g, NAME("Compute output"),
 			Texture::Info(
-				Vec2u32{ 512, 512 }, GPUFormat::RGBA16f, GPUMemoryUsage::LOCAL, 1, 1
+				Vec2u16{ 512, 512 }, GPUFormat::RGBA16f, GPUMemoryUsage::LOCAL, 1, 1
 			)
 		};
 
@@ -295,7 +297,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 			BindPipeline(computePipeline),
 			BindDescriptors(computeDescriptors),
-			Dispatch(computeOutput->getInfo().dimensions),
+			Dispatch(computeOutput->getInfo().dimensions.cast<Vec3u32>()),
 			
 			//Clear and bind MSAA
 
@@ -311,7 +313,7 @@ struct TestViewportInterface : public ViewportInterface {
 			BindPipeline(pipeline),
 			BindDescriptors(descriptors),
 			BindPrimitiveBuffer(mesh),
-			DrawInstanced(mesh->elements()),
+			DrawInstanced::indexed(mesh->elements()),
 
 			//Present to surface
 
@@ -345,7 +347,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 		swapchain = {
 			g, NAME("Swapchain"),
-			Swapchain::Info{ vp, false, DepthFormat::NONE }
+			Swapchain::Info{ vp, false }
 		};
 	}
 

@@ -5,8 +5,8 @@
 //it only provides access to high-level structures
 
 #include "graphics/graphics.hpp"
-#include "graphics/surface/swapchain.hpp"
-#include "graphics/surface/framebuffer.hpp"
+#include "graphics/memory/swapchain.hpp"
+#include "graphics/memory/framebuffer.hpp"
 #include "graphics/memory/primitive_buffer.hpp"
 #include "graphics/memory/shader_buffer.hpp"
 #include "graphics/memory/texture.hpp"

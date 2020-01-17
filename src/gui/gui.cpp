@@ -1,4 +1,5 @@
 #include "gui/gui.hpp"
+#include "graphics/memory/render_texture.hpp"
 #include "system/system.hpp"
 #include "system/local_file_system.hpp"
 #include "gui/window.hpp"
@@ -18,7 +19,7 @@ namespace igx::ui {
 		init(g);
 	}
 
-	GUI::GUI(Graphics &g, const CommandList &cl) :
+	GUI::GUI(Graphics &g, const CommandList &cl):
 		commands(cl), flags(Flags::OWNS_FRAMEBUFFER)
 	{
 		init(g);
@@ -32,10 +33,14 @@ namespace igx::ui {
 
 	void GUI::init(Graphics &g) {
 
-		resolution = {
-			g, NAME("GUI resolution buffer"),
+		info.enableSubpixelRendering = !(flags & Flags::DISABLE_SUBPIXEL_RENDERING);
+
+		graphics = &g;
+
+		guiDataBuffer = {
+			g, NAME("GUI info buffer"),
 			GPUBuffer::Info(
-				8, GPUBufferType::UNIFORM, GPUMemoryUsage::CPU_WRITE
+				sizeof(GUIInfo), GPUBufferType::UNIFORM, GPUMemoryUsage::CPU_WRITE
 			)
 		};
 
@@ -45,6 +50,7 @@ namespace igx::ui {
 		};
 
 		Buffer vertShader, fragShader;
+
 		oicAssert("Couldn't find pass through vertex shader", oic::System::files()->read("./shaders/gui.vert.spv", vertShader));
 		oicAssert("Couldn't find pass through fragment shader", oic::System::files()->read("./shaders/gui.frag.spv", fragShader));
 
@@ -63,7 +69,9 @@ namespace igx::ui {
 				MSAA(hasFb ? target->getInfo().samples : msaa, .2f),
 				DepthStencil(),
 				Rasterizer(CullMode::NONE),
-				BlendState::alphaBlend()
+
+				flags & Flags::DISABLE_SUBPIXEL_RENDERING
+				? BlendState::alphaBlend() : BlendState::subpixelAlphaBlend()
 			)
 		};
 
@@ -91,11 +99,17 @@ namespace igx::ui {
 
 		requestUpdate();
 
+		//Resize targets
+		
 		if (flags & GUI::OWNS_FRAMEBUFFER)
 			target->onResize(size);
 
-		memcpy(resolution->getBuffer(), size.arr, sizeof(size));
-		resolution->flush(0, 8);
+		info.res = size;
+
+		//Update buffer
+
+		std::memcpy(guiDataBuffer->getBuffer(), &info, sizeof(info));
+		guiDataBuffer->flush(0, sizeof(info));
 
 		//TODO: UIWindows
 	}

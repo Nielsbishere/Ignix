@@ -6,8 +6,9 @@ in layout(location=2) vec4 vcol;
 out layout(location=0) vec2 uv;
 out layout(location=1) vec4 col;
 
-layout(binding=0, std140) uniform Res {
+layout(binding=0, std140) uniform GUIInfo {
 	uvec2 res;
+	uint subpixelRendering;
 };
 
 void main() {
