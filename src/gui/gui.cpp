@@ -33,8 +33,6 @@ namespace igx::ui {
 
 	void GUI::init(Graphics &g) {
 
-		info.enableSubpixelRendering = !(flags & Flags::DISABLE_SUBPIXEL_RENDERING);
-
 		graphics = &g;
 
 		guiDataBuffer = {
@@ -85,7 +83,7 @@ namespace igx::ui {
 			target = {
 				g, NAME("GUI framebuffer"),
 				Framebuffer::Info(
-					{ GPUFormat::RGBA8 },
+					{ GPUFormat::sRGBA8 },
 					DepthFormat::NONE,
 					false,
 					msaa
@@ -104,12 +102,8 @@ namespace igx::ui {
 		if (flags & GUI::OWNS_FRAMEBUFFER)
 			target->onResize(size);
 
-		info.res = size;
-
-		//Update buffer
-
-		std::memcpy(guiDataBuffer->getBuffer(), &info, sizeof(info));
-		guiDataBuffer->flush(0, sizeof(info));
+		info.res = size.cast<Vec2i32>();
+		needsBufferUpdate = true;
 
 		//TODO: UIWindows
 	}
@@ -140,7 +134,42 @@ namespace igx::ui {
 		commands->add(EndFramebuffer());
 	}
 
-	void GUI::render(Graphics &g) {
+	void GUI::render(Graphics &g, const Vec2i32 &offset, const List<oic::Monitor> &mons) {
+
+		if (monitors != mons) {
+
+			monitors = mons;
+
+			for(auto &mon : monitors)
+				if (flags & Flags::DISABLE_SUBPIXEL_RENDERING)
+					mon.sampleB = mon.sampleR = mon.sampleB = {};
+
+			guiMonitorBuffer.release();
+			guiMonitorBuffer = {
+				g, NAME("GUI monitor buffer"),
+				GPUBuffer::Info(
+					Buffer((u8*)mons.data(), (u8*)(mons.data() + mons.size())),
+					GPUBufferType::STRUCTURED, GPUMemoryUsage::LOCAL
+				)
+			};
+
+			descriptors->updateDescriptor(2, { guiMonitorBuffer, 0 });
+			descriptors->flush(2, 1);
+
+			needsBufferUpdate = true;
+		}
+
+		if (offset != info.pos) {
+			info.pos = offset;
+			needsBufferUpdate = true;
+		}
+
+		if (needsBufferUpdate) {
+			std::memcpy(guiDataBuffer->getBuffer(), &info, sizeof(info));
+			guiDataBuffer->flush(0, sizeof(info));
+			needsBufferUpdate = false;
+			shouldRefresh = true;
+		}
 
 		if (shouldRefresh || couldRefresh) {
 
@@ -161,7 +190,6 @@ namespace igx::ui {
 
 			//Reset so it only draws when needed
 			shouldRefresh = couldRefresh = false;
-
 		}
 	}
 

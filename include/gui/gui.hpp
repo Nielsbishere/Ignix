@@ -2,6 +2,7 @@
 #include "helpers/graphics_object_ref.hpp"
 #include "utils/hash.hpp"
 #include "window_container.hpp"
+#include "system/viewport_manager.hpp"
 
 namespace oic {
 	class InputDevice;
@@ -12,8 +13,8 @@ namespace igx::ui {
 
 	//All info needed on the GPU
 	struct GUIInfo {
-		Vec2u32 res;
-		u32 enableSubpixelRendering;
+		Vec2i32 res, pos;
+		Vec2f32 whiteTexel;		//uv position of a pure "white" texel (so no subpixel filtering is applied)
 	};
 
 	//Renders GUI into a framebuffer
@@ -30,17 +31,20 @@ namespace igx::ui {
 			DISABLE_SUBPIXEL_RENDERING = 4		//Whether subpixel rendering should be disabled
 		};
 
-		static constexpr u32 msaa = 2;
+		static constexpr u32 msaa = 4;
 
 	private:
 
 		GUIInfo info;
 
+		List<oic::Monitor> monitors;
+
 		BufferAttributes vertexLayout = { 0, GPUFormat::RG32f, GPUFormat::RG32f, GPUFormat::RGBA8 };	//vec2 pos, vec2 uv, vec4un8 color
 
 		PipelineLayout pipelineLayout = {
 			RegisterLayout(NAME("Input texture"), 0, SamplerType::SAMPLER_2D, 0, ShaderAccess::FRAGMENT),
-			RegisterLayout(NAME("GUI Info"), 1, GPUBufferType::UNIFORM, 0, ShaderAccess::VERTEX_FRAGMENT, sizeof(GUIInfo))
+			RegisterLayout(NAME("GUI Info"), 1, GPUBufferType::UNIFORM, 0, ShaderAccess::VERTEX_FRAGMENT, sizeof(GUIInfo)),
+			RegisterLayout(NAME("Monitor buffer"), 2, GPUBufferType::STRUCTURED, 0, ShaderAccess::FRAGMENT, sizeof(oic::Monitor)),
 		};
 
 		SetClearColor clearColor{};
@@ -54,7 +58,7 @@ namespace igx::ui {
 		Sampler sampler;
 
 		Pipeline uiShader;
-		GPUBuffer guiDataBuffer;
+		GPUBuffer guiDataBuffer, guiMonitorBuffer;
 
 		Graphics *graphics;
 
@@ -63,11 +67,13 @@ namespace igx::ui {
 		usz commandListSize{};
 
 		Flags flags;
-		bool
-			couldRefresh = true,			//If it could refresh (e.g. mouse movement; recommend refresh)
-			shouldRefresh = true;			//If it should refresh (e.g. resizes; force refresh)
 
 	protected:
+
+		bool
+			couldRefresh = true,			//If it could refresh (e.g. mouse movement; recommend refresh)
+			shouldRefresh = true,			//If it should refresh (e.g. resizes; force refresh)
+			needsBufferUpdate = true;
 
 		void bakePrimitives(Graphics &g);	//Fills vertex/index buffer
 		bool prepareDrawData();				//Returns true if it should bake primitive data
@@ -115,7 +121,8 @@ namespace igx::ui {
 		bool onInputUpdate(const oic::InputDevice*, oic::InputHandle, bool isActive);
 
 		//Should be called per frame, but doesn't necessarily always render
-		void render(Graphics &g);
+		//"offset" is the 
+		void render(Graphics &g, const Vec2i32 &offset, const List<oic::Monitor> &monitors);
 
 		//Get the command list (only needed if it has its own)
 		inline const CommandList &getCommands() const { return commands; }

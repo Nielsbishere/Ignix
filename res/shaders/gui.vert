@@ -7,12 +7,12 @@ out layout(location=0) vec2 uv;
 out layout(location=1) vec4 col;
 
 layout(binding=0, std140) uniform GUIInfo {
-	uvec2 res;
-	uint subpixelRendering;
+	ivec4 res_pos;
+	vec2 whiteTexel;
 };
 
 void main() {
 	uv = vuv;
 	col = vcol;
-    gl_Position = vec4(vpos / res * 2 - 1, 0, 1);
+    gl_Position = vec4(vpos / res_pos.xy * 2 - 1, 0, 1);
 }

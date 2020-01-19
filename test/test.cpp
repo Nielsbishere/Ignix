@@ -39,7 +39,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 	Vec3f32 cubePosition = { 2, 2, 2 }, cubeRotation, cubeScale = { 1, 0.5f, 1 };
 
-	static constexpr u8 msaa = 2;
+	static constexpr u8 msaa = 8;
 
 	//TODO: Demonstrate multiple windows
 	//TODO: Use render targets
@@ -57,7 +57,7 @@ struct TestViewportInterface : public ViewportInterface {
 		intermediate = {
 			g, NAME("Framebuffer"),
 			Framebuffer::Info(
-				{ GPUFormat::RGBA8 }, DepthFormat::D32, false, msaa
+				{ GPUFormat::sRGBA8 }, DepthFormat::D32, false, msaa
 			)
 		};
 
@@ -395,8 +395,8 @@ struct TestViewportInterface : public ViewportInterface {
 
 	//Execute commandList
 
-	void render(const ViewportInfo*) final override {
-		gui->render(g);
+	void render(const ViewportInfo *vi) final override {
+		gui->render(g, vi->offset, vi->monitors);
 		g.present(intermediate, swapchain, cl, gui->getCommands());
 	}
 

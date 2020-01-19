@@ -9,7 +9,7 @@
 
 #define NK_PRIVATE
 #define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
+#define NK_ENABLE_SUBPIXEL_API
 
 #define NK_MEMCPY std::memcpy
 #define NK_MEMSET std::memset
@@ -18,6 +18,7 @@
 
 #include "Nuklear/nuklear.h"
 #include "system/allocator.hpp"
+#include "system/local_file_system.hpp"
 #include "types/enum.hpp"
 #include "input/input_device.hpp"
 #include "input/mouse.hpp"
@@ -133,7 +134,11 @@ namespace igx {
 
 		nk_font_atlas_begin(&atlas);
 
-		data->font = nk_font_atlas_add_default(&atlas, 13 /* TODO: Pixel height */, nullptr);
+		Buffer font;
+		oicAssert("GUI font required", oic::System::files()->read("./fonts/calibri.ttf", font));
+
+		struct nk_font_config config{};
+		data->font = nk_font_atlas_add_from_memory(&atlas, font.data(), font.size(), 13, nullptr);
 
 		int width{}, height{};
 		u8 *atlasData = (u8*) nk_font_atlas_bake(&atlas, &width, &height, NK_FONT_ATLAS_ALPHA8);
@@ -158,6 +163,9 @@ namespace igx {
 		};
 
 		nk_font_atlas_end(&atlas, nk_handle_ptr(data->textureAtlas.get()), &data->nullTexture);
+
+		info.whiteTexel = { data->nullTexture.uv.x, data->nullTexture.uv.y };
+		needsBufferUpdate = true;
 
 		//Init nk
 
