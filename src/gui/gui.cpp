@@ -108,8 +108,8 @@ namespace igx::ui {
 		//TODO: UIWindows
 	}
 
-	void GUI::requestUpdate() {
-		shouldRefresh = couldRefresh = true;
+	void GUI::requestUpdate() { 
+		requestedUpdate = true;
 	}
 
 	void GUI::beginDraw() {
@@ -156,7 +156,7 @@ namespace igx::ui {
 			descriptors->updateDescriptor(2, { guiMonitorBuffer, 0 });
 			descriptors->flush(2, 1);
 
-			needsBufferUpdate = true;
+			requestedUpdate = true;
 		}
 
 		if (offset != info.pos) {
@@ -168,29 +168,21 @@ namespace igx::ui {
 			std::memcpy(guiDataBuffer->getBuffer(), &info, sizeof(info));
 			guiDataBuffer->flush(0, sizeof(info));
 			needsBufferUpdate = false;
-			shouldRefresh = true;
+			requestedUpdate = true;
 		}
 
-		if (shouldRefresh || couldRefresh) {
+		//Check if a graphical change occurred by checking via UI
 
-			//Check if a graphical change occurred by checking via UI
+		if (prepareDrawData() || requestedUpdate) {
 
-			if (prepareDrawData()) {
-				bakePrimitives(g);
-				shouldRefresh = true;
-			}
+			bakePrimitives(g);
+			beginDraw();
+			draw();
+			endDraw();
 
-			//Only draw if it should
-
-			if (shouldRefresh) {
-				beginDraw();
-				draw();
-				endDraw();
-			}
-
-			//Reset so it only draws when needed
-			shouldRefresh = couldRefresh = false;
+			requestedUpdate = false;
 		}
+
 	}
 
 }

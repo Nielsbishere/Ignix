@@ -70,10 +70,7 @@ namespace igx::ui {
 
 	protected:
 
-		bool
-			couldRefresh = true,			//If it could refresh (e.g. mouse movement; recommend refresh)
-			shouldRefresh = true,			//If it should refresh (e.g. resizes; force refresh)
-			needsBufferUpdate = true;
+		bool needsBufferUpdate = true, requestedUpdate = true;
 
 		void bakePrimitives(Graphics &g);	//Fills vertex/index buffer
 		bool prepareDrawData();				//Returns true if it should bake primitive data

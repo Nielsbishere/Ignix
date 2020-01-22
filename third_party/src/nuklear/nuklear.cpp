@@ -386,7 +386,6 @@ namespace igx {
 			usz nkid = NKey::idByName(name);
 
 			if (nkid != NKey::count) {
-				couldRefresh = true;
 				nk_input_key(data->ctx, nk_keys(NKey::values[nkid]), int(isActive));
 				return true;
 			}
@@ -403,7 +402,6 @@ namespace igx {
 				usz nkid = NMouseButton::idByName(name);
 
 				if (nkid != MouseButton::count) {
-					couldRefresh = true;
 					nk_input_button(data->ctx, nk_buttons(NMouseButton::values[nkid]), int(x), int(y), int(isActive));
 					return true;
 				}
@@ -416,13 +414,11 @@ namespace igx {
 				usz axis = ih - MouseButton::count;
 
 				if (axis == MouseAxis::AXIS_WHEEL) {
-					couldRefresh = true;
 					nk_input_scroll(data->ctx, nk_vec2(f32(dvc->getCurrentAxis(MouseAxis::AXIS_WHEEL)), 0));
 					return true;
 				}
 
 				else if (axis == MouseAxis::AXIS_X || axis == MouseAxis::AXIS_Y) {
-					couldRefresh = true;
 					nk_input_motion(data->ctx, int(x), int(y));
 					return true;
 				}
@@ -568,7 +564,7 @@ namespace igx {
 		nk_clear(ctx);
 		nk_input_end(data->ctx);
 
-		f32 delta = f32(Timer::now() - data->previousTime) / 1_s;		//TODO: This should be called every frame
+		f32 delta = f32(Timer::now() - data->previousTime) / 1_s;
 
 		if (!data->previousTime) delta = 0;
 
