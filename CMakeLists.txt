@@ -33,24 +33,21 @@ file(GLOB_RECURSE nuklear "third_party/Nuklear/src/*.h" "third_party/Nuklear/src
 
 add_library(nuklear STATIC ${nuklear})
 
-add_custom_command(TARGET nuklear POST_BUILD COMMAND paq WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
+# add_custom_command(TARGET nuklear POST_BUILD COMMAND paq WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
 
 # Link library
 
-add_executable(
-	igx
+add_library(
+	igx STATIC
 	${igxHpp}
 	${igxCpp}
 	${depsHpp}
 	${depsCpp}
 	${shaders}
-	${testsCpp}
 	${shaderBinaries}
 	CMakeLists.txt
 	third_party/Nuklear/nuklear.h	# Add the output of nuklear
 )
-
-set_property(TARGET igx PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res")
 
 target_include_directories(igx PRIVATE include)
 target_include_directories(igx PRIVATE third_party)
@@ -64,8 +61,6 @@ source_group("Deps headers" FILES ${depsHpp} third_party/Nuklear/nuklear.h)
 source_group("Deps source" FILES ${depsCpp})
 source_group("Shaders" FILES ${shaders})
 source_group("Shader binaries" FILES ${shaderBinaries})
-
-add_custom_command(TARGET igx POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
 
 if(MSVC)
     target_compile_options(igx PRIVATE /W4 /WX /MD /MP /wd26812 /wd4201 /EHsc /GR)
