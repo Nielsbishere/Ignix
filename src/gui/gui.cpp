@@ -154,7 +154,7 @@ namespace igx::ui {
 			};
 
 			descriptors->updateDescriptor(2, { guiMonitorBuffer, 0 });
-			descriptors->flush(2, 1);
+			descriptors->flush({ { 2, 1 } });
 
 			requestedUpdate = true;
 		}
@@ -166,7 +166,7 @@ namespace igx::ui {
 
 		if (needsBufferUpdate) {
 			std::memcpy(guiDataBuffer->getBuffer(), &info, sizeof(info));
-			guiDataBuffer->flush(0, sizeof(info));
+			guiDataBuffer->flush({ { 0, sizeof(info) } });
 			needsBufferUpdate = false;
 			requestedUpdate = true;
 		}

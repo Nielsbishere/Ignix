@@ -289,7 +289,7 @@ namespace igx {
 			//Update vbo
 			else {
 				std::memcpy(data->vbo->getBuffer(), verts.memory.ptr, verts.needed);
-				data->vbo->flush(0, verts.needed);
+				data->vbo->flush({ { 0, verts.needed } });
 			}
 
 			//Too many indices (resize)
@@ -318,7 +318,7 @@ namespace igx {
 			//Update ibo
 			else {
 				std::memcpy(data->ibo->getBuffer(), idx.memory.ptr, idx.needed);
-				data->ibo->flush(0, idx.needed);
+				data->ibo->flush({ { 0, idx.needed } });
 			}
 
 			//Recreate primitive buffer
