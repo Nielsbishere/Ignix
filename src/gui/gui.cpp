@@ -13,19 +13,19 @@ namespace igx::ui {
 		init(g);
 	}
 
-	GUI::GUI(Graphics &g, const Framebuffer &fb, usz commandListSize) :
+	GUI::GUI(Graphics &g, const FramebufferRef &fb, usz commandListSize) :
 		target(fb), commandListSize(commandListSize), flags(Flags::OWNS_COMMAND_LIST)
 	{
 		init(g);
 	}
 
-	GUI::GUI(Graphics &g, const CommandList &cl):
+	GUI::GUI(Graphics &g, const CommandListRef &cl):
 		commands(cl), flags(Flags::OWNS_FRAMEBUFFER)
 	{
 		init(g);
 	}
 
-	GUI::GUI(Graphics &g, const Framebuffer &fb, const CommandList &cl) :
+	GUI::GUI(Graphics &g, const FramebufferRef &fb, const CommandListRef &cl) :
 		target(fb), commands(cl), flags(Flags::NONE)
 	{
 		init(g);
@@ -57,7 +57,7 @@ namespace igx::ui {
 		uiShader = {
 			g, NAME("GUI pipeline"),
 			Pipeline::Info(
-				PipelineFlag::OPTIMIZE,
+				Pipeline::Flag::OPTIMIZE,
 				{ vertexLayout },
 				{
 					{ ShaderStage::VERTEX, vertShader },

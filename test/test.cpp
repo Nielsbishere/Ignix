@@ -23,15 +23,15 @@ struct TestViewportInterface : public ViewportInterface {
 
 	//Resources
 
-	Swapchain swapchain;
-	Framebuffer intermediate;
-	CommandList cl;
-	PrimitiveBuffer mesh;
-	Descriptors descriptors, computeDescriptors;
-	Pipeline pipeline, computePipeline;
-	ShaderBuffer uniforms;
-	Texture tex2D, computeOutput;
-	Sampler samp;
+	SwapchainRef swapchain;
+	FramebufferRef intermediate;
+	CommandListRef cl;
+	PrimitiveBufferRef mesh;
+	DescriptorsRef descriptors, computeDescriptors;
+	PipelineRef pipeline, computePipeline;
+	ShaderBufferRef uniforms;
+	TextureRef tex2D, computeOutput;
+	SamplerRef samp;
 
 	Vec2u32 res;
 	Vec3f32 eye{ 3, 3, 7 };
@@ -145,7 +145,7 @@ struct TestViewportInterface : public ViewportInterface {
 			g, NAME("Test pipeline uniform buffer"),
 			ShaderBuffer::Info(
 				GPUBufferType::UNIFORM, GPUMemoryUsage::CPU_WRITE,
-				{ { NAME("mask"), ShaderBufferLayout(0, Buffer(sizeof(UniformBuffer))) } }
+				{ { NAME("mask"), ShaderBuffer::Layout(0, Buffer(sizeof(UniformBuffer))) } }
 			)
 		};
 
@@ -218,7 +218,7 @@ struct TestViewportInterface : public ViewportInterface {
 		computePipeline = {
 			g, NAME("Compute pipeline"),
 			Pipeline::Info(
-				PipelineFlag::OPTIMIZE,
+				Pipeline::Flag::OPTIMIZE,
 				comp,
 				pipelineLayout,
 				Vec3u32{ 16, 16, 1 }
@@ -270,7 +270,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 			Pipeline::Info(
 
-				PipelineFlag::OPTIMIZE,
+				Pipeline::Flag::OPTIMIZE,
 
 				attrib,
 

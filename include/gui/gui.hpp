@@ -49,16 +49,16 @@ namespace igx::ui {
 
 		SetClearColor clearColor{};
 
-		List<Texture> textures;
+		List<TextureRef> textures;
 
-		Descriptors descriptors;
-		Framebuffer target;
+		DescriptorsRef descriptors;
+		FramebufferRef target;
 
-		CommandList commands;
-		Sampler sampler;
+		CommandListRef commands;
+		SamplerRef sampler;
 
-		Pipeline uiShader;
-		GPUBuffer guiDataBuffer, guiMonitorBuffer;
+		PipelineRef uiShader;
+		GPUBufferRef guiDataBuffer, guiMonitorBuffer;
 
 		Graphics *graphics;
 
@@ -99,13 +99,13 @@ namespace igx::ui {
 		GUI(Graphics &g, const SetClearColor &clearColor = Vec4f32(), usz commandListSize = 4_MiB);
 
 		//Creates UI with a managed framebuffer
-		GUI(Graphics &g, const Framebuffer &fb, usz commandListSize = 4_MiB);
+		GUI(Graphics &g, const FramebufferRef &fb, usz commandListSize = 4_MiB);
 
 		//Creates UI with a managed command list
-		GUI(Graphics &g, const CommandList &cl);
+		GUI(Graphics &g, const CommandListRef &cl);
 
 		//Creates UI with a managed framebuffer and command list
-		GUI(Graphics &g, const Framebuffer &fb, const CommandList &cl);
+		GUI(Graphics &g, const FramebufferRef &fb, const CommandListRef &cl);
 
 		//Resize the UI's framebuffer (required, even for managed framebuffers)
 		void resize(const Vec2u32 &target);
@@ -122,10 +122,10 @@ namespace igx::ui {
 		void render(Graphics &g, const Vec2i32 &offset, const List<oic::Monitor> &monitors);
 
 		//Get the command list (only needed if it has its own)
-		inline const CommandList &getCommands() const { return commands; }
+		inline const CommandListRef &getCommands() const { return commands; }
 
 		//Get the framebuffer (only needed if it has its own)
-		inline const Framebuffer &getFramebuffer() const { return target; }
+		inline const FramebufferRef &getFramebuffer() const { return target; }
 
 		//Get the UI flags
 		inline Flags getFlags() const { return flags; }

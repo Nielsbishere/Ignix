@@ -34,34 +34,37 @@ file(GLOB_RECURSE nuklear "third_party/Nuklear/src/*.h" "third_party/Nuklear/src
 
 add_library(nuklear STATIC ${nuklear})
 
-if(WIN32)
-	add_custom_command(TARGET nuklear POST_BUILD COMMAND paq WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
-else()
-	add_custom_command(TARGET nuklear POST_BUILD COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src/paq.sh" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
+set(enableIgxTest TRUE CACHE BOOL "Enable IGX test")
+set(enableNuklearBuild FALSE CACHE BOOL "Enable Nuklear header generate")
+
+if(enableNuklearBuild)
+	if(WIN32)
+		add_custom_command(TARGET nuklear POST_BUILD COMMAND paq WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
+	else()
+		add_custom_command(TARGET nuklear POST_BUILD COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src/paq.sh" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
+	endif()
 endif()
 
 # Link library
 
-add_executable(
-	igx
+add_library(
+	igx STATIC
 	${igxHpp}
 	${igxCpp}
 	${depsHpp}
 	${depsCpp}
 	${shaders}
-	${testsCpp}
 	${shaderBinaries}
 	CMakeLists.txt
 	third_party/Nuklear/nuklear.h	# Add the output of nuklear
 )
 
-set_property(TARGET igx PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res")
-
-target_include_directories(igx PRIVATE include)
+target_include_directories(igx PUBLIC include)
 target_include_directories(igx PRIVATE third_party)
-target_include_directories(igx PRIVATE ignis/include)
-target_include_directories(igx PRIVATE ignis/core2/include)
-target_link_libraries(igx PRIVATE nuklear ignis ocore igxi)
+target_include_directories(igx PUBLIC ignis/include)
+target_include_directories(igx PUBLIC ignis/core2/include)
+target_link_libraries(igx PRIVATE nuklear igxi)
+target_link_libraries(igx PUBLIC ignis ocore)
 
 source_group("Headers" FILES ${ignisHpp})
 source_group("Source" FILES ${ignisCpp})
@@ -70,10 +73,18 @@ source_group("Deps source" FILES ${depsCpp})
 source_group("Shaders" FILES ${shaders})
 source_group("Shader binaries" FILES ${shaderBinaries})
 
-add_custom_command(TARGET igx POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
-
 if(MSVC)
     target_compile_options(igx PRIVATE /W4 /WX /MD /MP /wd26812 /wd4201 /EHsc /GR)
 else()
     target_compile_options(igx PRIVATE -Wall -fms-extensions -Wextra -Werror)
+endif()
+
+if(enableIgxTest)
+
+	add_executable(igx_test ${testsCpp})
+	target_link_libraries(igx_test PUBLIC igx)
+
+	add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
+	set_property(TARGET igx_test PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res")
+
 endif()

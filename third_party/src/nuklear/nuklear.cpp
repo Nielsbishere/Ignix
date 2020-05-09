@@ -86,9 +86,9 @@ namespace igx {
 
 		static constexpr usz MAX_MEMORY = 32_KiB;
 
-		GPUBuffer ibo, vbo;
-		Texture textureAtlas;
-		PrimitiveBuffer primitiveBuffer;
+		GPUBufferRef ibo, vbo;
+		TextureRef textureAtlas;
+		PrimitiveBufferRef primitiveBuffer;
 
 		nk_context *ctx;
 		nk_font *font;
@@ -152,7 +152,7 @@ namespace igx {
 			g, NAME("Atlas texture"), tinfo
 		};
 
-		DescriptorsSubresources resources;
+		Descriptors::Subresources resources;
 		resources[0] = { sampler, data->textureAtlas, TextureType::TEXTURE_2D };
 		resources[1] = { guiDataBuffer, 0 };
 
