@@ -141,8 +141,11 @@ namespace igx::ui {
 			monitors = mons;
 
 			for(auto &mon : monitors)
-				if (flags & Flags::DISABLE_SUBPIXEL_RENDERING)
-					mon.sampleB = mon.sampleR = mon.sampleB = {};
+				if (flags & Flags::DISABLE_SUBPIXEL_RENDERING) {
+					mon.sampleR = {};
+					mon.sampleG = {};
+					mon.sampleB = {};
+				}
 
 			guiMonitorBuffer.release();
 			guiMonitorBuffer = {
@@ -154,7 +157,7 @@ namespace igx::ui {
 			};
 
 			descriptors->updateDescriptor(2, { guiMonitorBuffer, 0 });
-			descriptors->flush(2, 1);
+			descriptors->flush({ { 2, 1 } });
 
 			requestedUpdate = true;
 		}
@@ -166,7 +169,7 @@ namespace igx::ui {
 
 		if (needsBufferUpdate) {
 			std::memcpy(guiDataBuffer->getBuffer(), &info, sizeof(info));
-			guiDataBuffer->flush(0, sizeof(info));
+			guiDataBuffer->flush({ { 0, sizeof(info) } });
 			needsBufferUpdate = false;
 			requestedUpdate = true;
 		}

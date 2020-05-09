@@ -39,7 +39,7 @@ namespace igx {
 			}
 		}
 
-		GraphicsObjectRef() { static_assert(std::is_base_of_v<ignis::GraphicsObject, T>, "GraphicsObjectRef can only be used on GraphicsObjects");  }
+		GraphicsObjectRef() { static_assert(std::is_base_of_v<ignis::GPUObject, T>, "GraphicsObjectRef can only be used on GraphicsObjects");  }
 		~GraphicsObjectRef() {
 			release();
 		}
@@ -91,13 +91,13 @@ namespace igx {
 
 			auto it = g.find(name);
 
-			oicAssert("The requested resource already exists", it == g.end());
+			oicAssert("The requested resource already exists", it == g.endByName());
 
 			//Try and create resource (nullptr if it fails)
 			
 			try {
 				ptr = new T(g, name, info);
-			} catch (std::runtime_error err) { }
+			} catch (std::runtime_error&) { }
 		}
 
 		//Finds a GraphicsObject

@@ -345,6 +345,8 @@ struct TestViewportInterface : public ViewportInterface {
 
 		//Create MSAA render target and window swapchain
 
+		g.resume();		//This thread can now interact with graphics
+
 		swapchain = {
 			g, NAME("Swapchain"),
 			Swapchain::Info{ vp, false }
@@ -371,14 +373,16 @@ struct TestViewportInterface : public ViewportInterface {
 		};
 
 		memcpy(uniforms->getBuffer(), &buffer, sizeof(UniformBuffer));
-		uniforms->flush(0, sizeof(UniformBuffer));
+		uniforms->flush({ { 0, sizeof(UniformBuffer) } });
 	}
 
 	//Update size of surfaces
 
 	void resize(const ViewportInfo*, const Vec2u32 &size) final override {
+
 		res = size;
 		updateUniforms();
+
 		intermediate->onResize(size);
 		gui->resize(size);
 		swapchain->onResize(size);
@@ -387,7 +391,7 @@ struct TestViewportInterface : public ViewportInterface {
 	//Update input
 
 	void onInputUpdate(
-		const ViewportInfo*, const InputDevice *dvc, InputHandle ih, bool isActive
+		ViewportInfo*, const InputDevice *dvc, InputHandle ih, bool isActive
 	) final override {
 
 		gui->onInputUpdate(dvc, ih, isActive);
@@ -439,14 +443,23 @@ struct TestViewportInterface : public ViewportInterface {
 
 int main() {
 
-	Graphics g;
+	const String appName = "Igx test window";
+	constexpr u32 appVersion = 1;
+
+	Graphics g(
+		appName,
+		appVersion,
+		"Igx",
+		1
+	);
+
 	TestViewportInterface viewportInterface(g);
 
 	g.pause();
 
 	System::viewportManager()->create(
 		ViewportInfo(
-			"Test window", {}, {}, 0, &viewportInterface, ViewportInfo::HANDLE_INPUT
+			appName, {}, {}, 0, &viewportInterface, ViewportInfo::HANDLE_INPUT
 		)
 	);
 

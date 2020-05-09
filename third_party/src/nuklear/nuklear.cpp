@@ -1,4 +1,4 @@
-#include <string>
+#include <cstring>
 
 //Nuklear Configuration
 
@@ -137,7 +137,6 @@ namespace igx {
 		Buffer font;
 		oicAssert("GUI font required", oic::System::files()->read("./fonts/calibri.ttf", font));
 
-		struct nk_font_config config{};
 		data->font = nk_font_atlas_add_from_memory(&atlas, font.data(), font.size(), 13, nullptr);
 
 		int width{}, height{};
@@ -154,7 +153,7 @@ namespace igx {
 		};
 
 		DescriptorsSubresources resources;
-		resources[0] = { sampler, data->textureAtlas };
+		resources[0] = { sampler, data->textureAtlas, TextureType::TEXTURE_2D };
 		resources[1] = { guiDataBuffer, 0 };
 
 		descriptors = {
@@ -289,7 +288,7 @@ namespace igx {
 			//Update vbo
 			else {
 				std::memcpy(data->vbo->getBuffer(), verts.memory.ptr, verts.needed);
-				data->vbo->flush(0, verts.needed);
+				data->vbo->flush({ { 0, verts.needed } });
 			}
 
 			//Too many indices (resize)
@@ -318,7 +317,7 @@ namespace igx {
 			//Update ibo
 			else {
 				std::memcpy(data->ibo->getBuffer(), idx.memory.ptr, idx.needed);
-				data->ibo->flush(0, idx.needed);
+				data->ibo->flush({ { 0, idx.needed } });
 			}
 
 			//Recreate primitive buffer

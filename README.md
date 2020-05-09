@@ -6,6 +6,8 @@ For better compilation,  use clangcl as a toolchain when compiling on windows (`
 ![](https://github.com/Nielsbishere/ignix/workflows/C%2FC++%20CI/badge.svg)
 
 
+## Dependencies
+- Nuklear and to build nuklear properly; python3 (not older versions)
 
 ## Windows
 
@@ -14,4 +16,3 @@ For better compilation,  use clangcl as a toolchain when compiling on windows (`
 Some monitors have a different physical layout for the subpixels, one of those is a BGR screen. Since the order is reversed as opposed to RGB, the text won't look right.
 
 Unfortunately, monitors don't have the ability to report their physical color layout. This can make font rendering difficult (and not look right). Luckily, using "Adjust ClearType text" built-in to windows, you can define how fonts are rendered and they will all change (including the igx text rendering).
-

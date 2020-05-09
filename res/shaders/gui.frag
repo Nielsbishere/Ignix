@@ -16,7 +16,7 @@ layout(binding=0, std140) uniform GUIInfo {
 
 struct Monitor {
 	ivec4 begin_orientation_refreshRate;
-	ivec4 end_gamma_contrast;				//TODO: Use this gamma properly
+	ivec4 end_gamma_contrast;
 	vec4 sampleR_sampleG;
 	vec4 sampleB_sizeInMeters;
 };

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.13.0)
 project(igx)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -33,7 +34,11 @@ file(GLOB_RECURSE nuklear "third_party/Nuklear/src/*.h" "third_party/Nuklear/src
 
 add_library(nuklear STATIC ${nuklear})
 
-add_custom_command(TARGET nuklear POST_BUILD COMMAND paq WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
+if(WIN32)
+	add_custom_command(TARGET nuklear POST_BUILD COMMAND paq WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
+else()
+	add_custom_command(TARGET nuklear POST_BUILD COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src/paq.sh" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
+endif()
 
 # Link library
 
@@ -54,8 +59,8 @@ set_property(TARGET igx PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_D
 
 target_include_directories(igx PRIVATE include)
 target_include_directories(igx PRIVATE third_party)
-target_include_directories(igx PRIVATE Ignis/include)
-target_include_directories(igx PRIVATE Ignis/core2/include)
+target_include_directories(igx PRIVATE ignis/include)
+target_include_directories(igx PRIVATE ignis/core2/include)
 target_link_libraries(igx PRIVATE nuklear ignis ocore igxi)
 
 source_group("Headers" FILES ${ignisHpp})
@@ -70,5 +75,5 @@ add_custom_command(TARGET igx POST_BUILD COMMAND compile.sh ${shaders} WORKING_D
 if(MSVC)
     target_compile_options(igx PRIVATE /W4 /WX /MD /MP /wd26812 /wd4201 /EHsc /GR)
 else()
-    target_compile_options(igx PRIVATE -Wall -Wpedantic -Wextra -Werror)
+    target_compile_options(igx PRIVATE -Wall -fms-extensions -Wextra -Werror)
 endif()

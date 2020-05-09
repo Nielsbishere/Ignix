@@ -1,5 +1,6 @@
 #pragma once
 #include "types/types.hpp"
+#include <algorithm>
 
 namespace igx::ui {
 
