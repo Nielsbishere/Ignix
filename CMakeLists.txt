@@ -89,7 +89,12 @@ if(enableIgxTest)
 	add_executable(igx_test ${testsCpp})
 	target_link_libraries(igx_test PUBLIC igx)
 
-	add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
+	if(WIN32)
+		add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.bat ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
+	else()
+		add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
+	endif()
+
 	set_property(TARGET igx_test PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res")
 
 	if(MSVC)
