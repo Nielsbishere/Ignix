@@ -119,7 +119,7 @@ struct TestViewportInterface : public ViewportInterface {
 			{ 1, 0 }, { 0, 0 }
 		};
 
-		const List<u8> iboBuffer{
+		const List<u16> iboBuffer{
 			0,3,2, 2,1,0,			//Bottom
 			4,5,6, 6,7,4,			//Top
 			8,11,10, 10,9,8,		//Back
@@ -135,7 +135,7 @@ struct TestViewportInterface : public ViewportInterface {
 					BufferLayout(positionBuffer, attrib[0]),
 					BufferLayout(uvBuffer, attrib[1])
 				},
-				BufferLayout(iboBuffer, { 0, GPUFormat::R8u })
+				BufferLayout(iboBuffer, { 0, GPUFormat::R16u })
 			)
 		};
 

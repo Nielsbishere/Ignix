@@ -25,19 +25,20 @@ add_subdirectory(igxi)
 
 # Setup test data
 
+set(enableIgxTest TRUE CACHE BOOL "Enable IGX test")
 file(GLOB_RECURSE shaders "res/shaders/*.comp" "res/shaders/*.vert" "res/shaders/*.frag")
 file(GLOB_RECURSE shaderBinaries "res/shaders/*.spv")
 
 # Nuklear dependency
 
-file(GLOB_RECURSE nuklear "third_party/Nuklear/src/*.h" "third_party/Nuklear/src/*.c")
-
-add_library(nuklear STATIC ${nuklear})
-
-set(enableIgxTest TRUE CACHE BOOL "Enable IGX test")
 set(enableNuklearBuild FALSE CACHE BOOL "Enable Nuklear header generate")
 
 if(enableNuklearBuild)
+
+	file(GLOB_RECURSE nuklear "third_party/Nuklear/src/*.h" "third_party/Nuklear/src/*.c")
+
+	add_library(nuklear STATIC ${nuklear})
+
 	if(WIN32)
 		add_custom_command(TARGET nuklear POST_BUILD COMMAND paq WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Nuklear/src)
 	else()
@@ -63,8 +64,12 @@ target_include_directories(igx PUBLIC include)
 target_include_directories(igx PRIVATE third_party)
 target_include_directories(igx PUBLIC ignis/include)
 target_include_directories(igx PUBLIC ignis/core2/include)
-target_link_libraries(igx PRIVATE nuklear igxi)
+	target_link_libraries(igx PRIVATE igxi)
 target_link_libraries(igx PUBLIC ignis ocore)
+
+if(enableNuklearBuild)
+	target_link_libraries(igx PRIVATE nuklear)
+endif()
 
 source_group("Headers" FILES ${ignisHpp})
 source_group("Source" FILES ${ignisCpp})
@@ -86,5 +91,11 @@ if(enableIgxTest)
 
 	add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
 	set_property(TARGET igx_test PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res")
+
+	if(MSVC)
+		target_compile_options(igx_test PRIVATE /W4 /WX /MD /MP /wd4201 /EHsc /GR)
+	else()
+		target_compile_options(igx_test PRIVATE -Wall -Wextra -Werror -fms-extensions)
+	endif()
 
 endif()
