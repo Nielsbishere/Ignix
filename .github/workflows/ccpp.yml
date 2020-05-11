@@ -4,13 +4,23 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Windows build
+
+    name: Windows opengl build
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v1
       with:
         submodules: recursive
+    - name: Setup Vulkan
+      run: |
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/1.2.135.0/windows/VulkanSDK-1.2.135.0-Installer.exe" -OutFile VulkanSDK.exe
+          $installer = Start-Process -FilePath VulkanSDK.exe -Wait -PassThru -ArgumentList @("/S");
+          $installer.WaitForExit();
     - name: cmake build
-      run: cmake . -G "Visual Studio 16 2019"
+      run: cmake . -G "Visual Studio 16 2019" -A x64 -DgraphicsApi=opengl
+    - name: build
+      run: cmake --build . -j 8
+    - name: cmake build
+      run: del CMakeCache.txt & cmake . -G "Visual Studio 16 2019" -A x64 -DgraphicsApi=vulkan
     - name: build
       run: cmake --build . -j 8
