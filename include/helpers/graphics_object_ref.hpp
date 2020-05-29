@@ -9,6 +9,7 @@
 #include "graphics/memory/framebuffer.hpp"
 #include "graphics/memory/primitive_buffer.hpp"
 #include "graphics/memory/shader_buffer.hpp"
+#include "graphics/memory/upload_buffer.hpp"
 #include "graphics/memory/texture.hpp"
 #include "graphics/shader/sampler.hpp"
 #include "graphics/shader/pipeline.hpp"
@@ -132,9 +133,11 @@ namespace igx {
 	using GPUBufferRef = GraphicsObjectRef<ignis::GPUBuffer>;
 	using ShaderBufferRef = GraphicsObjectRef<ignis::ShaderBuffer>;
 	using PipelineRef = GraphicsObjectRef<ignis::Pipeline>;
+	using PipelineLayoutRef = GraphicsObjectRef<ignis::PipelineLayout>;
 	using TextureRef = GraphicsObjectRef<ignis::Texture>;
 	using SamplerRef = GraphicsObjectRef<ignis::Sampler>;
 	using DescriptorsRef = GraphicsObjectRef<ignis::Descriptors>;
+	using UploadBufferRef = GraphicsObjectRef<ignis::UploadBuffer>;
 
 }
 

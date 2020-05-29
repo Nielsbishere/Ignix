@@ -38,13 +38,13 @@ namespace igx::ui {
 		guiDataBuffer = {
 			g, NAME("GUI info buffer"),
 			GPUBuffer::Info(
-				sizeof(GUIInfo), GPUBufferType::UNIFORM, GPUMemoryUsage::CPU_WRITE
+				sizeof(GUIInfo), GPUBufferType::UNIFORM, GPUMemoryUsage::CPU_ACCESS
 			)
 		};
 
 		sampler = {
 			g, NAME("GUI sampler"),
-			Sampler::Info()
+			Sampler::Info(SamplerMin::LINEAR, SamplerMag::LINEAR, SamplerMode::REPEAT, 1)
 		};
 
 		Buffer vertShader, fragShader;
@@ -57,19 +57,18 @@ namespace igx::ui {
 		uiShader = {
 			g, NAME("GUI pipeline"),
 			Pipeline::Info(
-				Pipeline::Flag::OPTIMIZE,
+				Pipeline::Flag::NONE,
 				{ vertexLayout },
 				{
-					{ ShaderStage::VERTEX, vertShader },
-					{ ShaderStage::FRAGMENT, fragShader }
+					{ ShaderStage::VERTEX, { vertShader, "main" } },
+					{ ShaderStage::FRAGMENT, { fragShader, "main" } }
 				},
 				pipelineLayout,
 				MSAA(hasFb ? target->getInfo().samples : msaa, .2f),
 				DepthStencil(),
 				Rasterizer(CullMode::NONE),
 
-				flags & Flags::DISABLE_SUBPIXEL_RENDERING
-				? BlendState::alphaBlend() : BlendState::subpixelAlphaBlend()
+				flags & Flags::DISABLE_SUBPIXEL_RENDERING ? BlendState::alphaBlend() : BlendState::subpixelAlphaBlend()
 			)
 		};
 
@@ -89,6 +88,11 @@ namespace igx::ui {
 					msaa
 				)
 			};
+
+		uploadBuffer = {
+			g, NAME("GUI Upload buffer"),
+			UploadBuffer::Info(64_KiB, 0, 1_MiB)
+		};
 
 		initData(g);
 	}
@@ -136,6 +140,8 @@ namespace igx::ui {
 
 	void GUI::render(Graphics &g, const Vec2i32 &offset, const List<oic::Monitor> &mons) {
 
+		bool changedMonitors{};
+
 		if (monitors != mons) {
 
 			monitors = mons;
@@ -152,13 +158,14 @@ namespace igx::ui {
 				g, NAME("GUI monitor buffer"),
 				GPUBuffer::Info(
 					Buffer((u8*)mons.data(), (u8*)(mons.data() + mons.size())),
-					GPUBufferType::STRUCTURED, GPUMemoryUsage::LOCAL
+					GPUBufferType::STRUCTURED, GPUMemoryUsage::CPU_ACCESS
 				)
 			};
 
 			descriptors->updateDescriptor(2, { guiMonitorBuffer, 0 });
 			descriptors->flush({ { 2, 1 } });
 
+			changedMonitors = true;
 			requestedUpdate = true;
 		}
 
@@ -169,7 +176,6 @@ namespace igx::ui {
 
 		if (needsBufferUpdate) {
 			std::memcpy(guiDataBuffer->getBuffer(), &info, sizeof(info));
-			guiDataBuffer->flush({ { 0, sizeof(info) } });
 			needsBufferUpdate = false;
 			requestedUpdate = true;
 		}
@@ -179,7 +185,19 @@ namespace igx::ui {
 		if (prepareDrawData() || requestedUpdate) {
 
 			bakePrimitives(g);
+
 			beginDraw();
+
+			if (requestedUpdate)
+				commands->add(
+					FlushBuffer(guiDataBuffer, uploadBuffer)
+				);
+
+			if (changedMonitors)
+				commands->add(
+					FlushBuffer(guiMonitorBuffer, uploadBuffer)
+				);
+
 			draw();
 			endDraw();
 

@@ -98,10 +98,14 @@ namespace igx {
 
 		nk_draw_null_texture nullTexture;
 
-		Buffer current, previous;
 		usz usedPrevious{};
+		Buffer current, previous;
 
 		ns previousTime{};
+
+		usz vboSize{}, iboSize{};
+
+		bool init{};
 	};
 
 	//Handling creation and deletion
@@ -116,6 +120,15 @@ namespace igx {
 	}
 	
 	void GUI::initData(Graphics &g) {
+
+		pipelineLayout = {
+			g, NAME("UI Pipeline layout"),
+			PipelineLayout::Info{
+				RegisterLayout(NAME("Input texture"), 0, SamplerType::SAMPLER_2D, 0, ShaderAccess::FRAGMENT),
+				RegisterLayout(NAME("GUI Info"), 1, GPUBufferType::UNIFORM, 0, ShaderAccess::VERTEX_FRAGMENT, sizeof(GUIInfo)),
+				RegisterLayout(NAME("Monitor buffer"), 2, GPUBufferType::STRUCTURED, 0, ShaderAccess::FRAGMENT, sizeof(oic::Monitor)),
+			}
+		};
 
 		//Allocate memory
 
@@ -257,12 +270,15 @@ namespace igx {
 		nk_buffer_init(&idx, &data->allocator, NK_BUFFER_DEFAULT_INITIAL_SIZE);
 		nk_convert(ctx, &data->drawCommands, &verts, &idx, &cfg);
 
-
 		if (verts.needed) {
+
+			data->vboSize = verts.needed;
+			data->iboSize = idx.needed;
 
 			bool recreatePbuffer = false;
 
-			//Too many vertices (resize)
+			//Resize if not enough vertices or copy into buffer
+
 			if (!data->vbo.exists() || verts.needed > data->vbo->size()) {
 
 				recreatePbuffer = true;
@@ -275,23 +291,19 @@ namespace igx {
 				if (newSize % stride)
 					newSize = (newSize / stride + 1) * stride;
 
-				auto vboInfo = GPUBuffer::Info(newSize, GPUBufferType::VERTEX, GPUMemoryUsage::CPU_WRITE);
+				auto vboInfo = GPUBuffer::Info(newSize, GPUBufferType::VERTEX, GPUMemoryUsage::CPU_ACCESS);
 				std::memcpy(vboInfo.initData.data(), verts.memory.ptr, verts.needed);
 
 				data->vbo = {
 					g, NAME("NK VBO"),
 					vboInfo
 				};
-
 			}
 			
-			//Update vbo
-			else {
-				std::memcpy(data->vbo->getBuffer(), verts.memory.ptr, verts.needed);
-				data->vbo->flush({ { 0, verts.needed } });
-			}
+			else std::memcpy(data->vbo->getBuffer(), verts.memory.ptr, verts.needed);
 
-			//Too many indices (resize)
+			//Resize if not enough indices or copy into buffer
+
 			if (!data->ibo.exists() || idx.needed > data->ibo->size()) {
 
 				recreatePbuffer = true;
@@ -304,7 +316,7 @@ namespace igx {
 				if (newSize % stride)
 					newSize = (newSize / stride + 1) * stride;
 
-				auto iboInfo = GPUBuffer::Info(newSize, GPUBufferType::INDEX, GPUMemoryUsage::CPU_WRITE);
+				auto iboInfo = GPUBuffer::Info(newSize, GPUBufferType::INDEX, GPUMemoryUsage::CPU_ACCESS);
 				std::memcpy(iboInfo.initData.data(), idx.memory.ptr, idx.needed);
 
 				data->ibo = {
@@ -314,13 +326,10 @@ namespace igx {
 
 			}
 
-			//Update ibo
-			else {
-				std::memcpy(data->ibo->getBuffer(), idx.memory.ptr, idx.needed);
-				data->ibo->flush({ { 0, idx.needed } });
-			}
+			else std::memcpy(data->ibo->getBuffer(), idx.memory.ptr, idx.needed);
 
 			//Recreate primitive buffer
+
 			if (recreatePbuffer) {
 
 				data->primitiveBuffer.release();
@@ -342,6 +351,23 @@ namespace igx {
 
 		nk_buffer_free(&verts);
 		nk_buffer_free(&idx);
+
+		CommandListRef cmd = {
+			g, NAME("UI staging command list"),
+			CommandList::Info(512)
+		};
+
+		if (!data->init) {
+			cmd->add(FlushImage(data->textureAtlas, uploadBuffer));
+			data->init = true;
+		}
+
+		cmd->add(
+			FlushBuffer(data->vbo, uploadBuffer, 0, data->vboSize),
+			FlushBuffer(data->ibo, uploadBuffer, 0, data->iboSize)
+		);
+		
+		g.execute(cmd);
 	}
 
 	//Draw commands

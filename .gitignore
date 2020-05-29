@@ -32,3 +32,4 @@
 *.app
 builds/
 builds_linux/
+builds_vulkan/

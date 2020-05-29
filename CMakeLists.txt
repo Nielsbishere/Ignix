@@ -21,7 +21,7 @@ file(GLOB_RECURSE depsCpp "third_party/src/*.cpp")
 file(GLOB_RECURSE testsCpp "test/*.cpp")
 
 if("$ENV{VULKAN_SDK}" STREQUAL "")
-	message(FATAL "Ignix requires the Vulkan SDK so it can compile the shaders with SPIR-V")
+	message(FATAL_ERROR "Ignix requires the Vulkan SDK so it can compile the shaders with SPIR-V")
 endif()
 
 add_subdirectory(ignis)

@@ -28,8 +28,10 @@ struct TestViewportInterface : public ViewportInterface {
 	CommandListRef cl;
 	PrimitiveBufferRef mesh;
 	DescriptorsRef descriptors, computeDescriptors;
+	PipelineLayoutRef pipelineLayout, computePipelineLayout;
 	PipelineRef pipeline, computePipeline;
 	ShaderBufferRef uniforms;
+	UploadBufferRef uploadBuffer;
 	TextureRef tex2D, computeOutput;
 	SamplerRef samp;
 
@@ -144,7 +146,7 @@ struct TestViewportInterface : public ViewportInterface {
 		uniforms = {
 			g, NAME("Test pipeline uniform buffer"),
 			ShaderBuffer::Info(
-				GPUBufferType::UNIFORM, GPUMemoryUsage::CPU_WRITE,
+				GPUBufferType::UNIFORM, GPUMemoryUsage::SHARED | GPUMemoryUsage::CPU_ACCESS,
 				{ { NAME("mask"), ShaderBuffer::Layout(0, Buffer(sizeof(UniformBuffer))) } }
 			)
 		};
@@ -199,13 +201,18 @@ struct TestViewportInterface : public ViewportInterface {
 
 		//Create layout for compute
 
-		PipelineLayout pipelineLayout(
-			RegisterLayout(
-				NAME("Output"), 0, TextureType::TEXTURE_2D, 0, ShaderAccess::COMPUTE, true
+		computePipelineLayout = {
+			g, NAME("Compute pipeline layout"),
+			PipelineLayout::Info(
+				RegisterLayout(
+					NAME("Output"), 0,
+					TextureType::TEXTURE_2D, 0,
+					ShaderAccess::COMPUTE, GPUFormat::RGBA16f, true
+				)
 			)
-		);
+		};
 
-		auto descriptorsInfo = Descriptors::Info(pipelineLayout, {});
+		auto descriptorsInfo = Descriptors::Info(computePipelineLayout, {});
 		descriptorsInfo.resources[0] = { computeOutput, TextureType::TEXTURE_2D };
 
 		computeDescriptors = {
@@ -218,9 +225,9 @@ struct TestViewportInterface : public ViewportInterface {
 		computePipeline = {
 			g, NAME("Compute pipeline"),
 			Pipeline::Info(
-				Pipeline::Flag::OPTIMIZE,
+				Pipeline::Flag::NONE,
 				comp,
-				pipelineLayout,
+				computePipelineLayout,
 				Vec3u32{ 16, 16, 1 }
 			)
 		};
@@ -240,14 +247,21 @@ struct TestViewportInterface : public ViewportInterface {
 
 		pipelineLayout = {
 
-			RegisterLayout(
-				NAME("Test"), 0, GPUBufferType::UNIFORM, 0,
-				ShaderAccess::VERTEX_FRAGMENT, uniforms->size()
-			),
+			g, NAME("Graphics pipeline layout"),
 
-			RegisterLayout(
-				NAME("test"), 1, SamplerType::SAMPLER_2D, 0,
-				ShaderAccess::FRAGMENT
+			PipelineLayout::Info(
+
+				RegisterLayout(
+					NAME("Test"), 0,
+					GPUBufferType::UNIFORM, 0,
+					ShaderAccess::VERTEX_FRAGMENT, uniforms->size()
+				),
+
+				RegisterLayout(
+					NAME("test"), 1,
+					SamplerType::SAMPLER_2D, 0,
+					ShaderAccess::FRAGMENT
+				)
 			)
 		};
 
@@ -270,13 +284,13 @@ struct TestViewportInterface : public ViewportInterface {
 
 			Pipeline::Info(
 
-				Pipeline::Flag::OPTIMIZE,
+				Pipeline::Flag::NONE,
 
 				attrib,
 
-				HashMap<ShaderStage, Buffer>{
-					{ ShaderStage::VERTEX, vert },
-					{ ShaderStage::FRAGMENT, frag }
+				HashMap<ShaderStage, Pair<Buffer, String>>{
+					{ ShaderStage::VERTEX, { vert, "main" } },
+					{ ShaderStage::FRAGMENT, { frag, "main" } }
 				},
 
 				pipelineLayout,
@@ -287,11 +301,29 @@ struct TestViewportInterface : public ViewportInterface {
 			)
 		};
 
-		//Create command list and store our commands
+		//Submit our resources to the GPU
 
-		cl = { g, NAME("Command list"), CommandList::Info(1_KiB) };
+		uploadBuffer = {
+			g, NAME("Upload buffer"),
+			UploadBuffer::Info(64_KiB, 0, 0)		//Only use 64_KiB, don't allow shrinking/growing
+		};
+		
+		cl = { g, NAME("Command list"), CommandList::Info(2_KiB) };
 
 		cl->add(
+			FlushImage(tex2D, uploadBuffer),
+			FlushBuffer(mesh, uploadBuffer)
+		);
+
+		g.execute(cl);
+		cl->clear();
+
+		//Create command list and store our commands
+
+		cl->add(
+
+			//Update uniforms
+			FlushBuffer(uniforms, nullptr),
 
 			//Render to compute shader
 
@@ -359,29 +391,11 @@ struct TestViewportInterface : public ViewportInterface {
 		swapchain.release();
 	}
 
-	//Helper functions
-
-	void updateUniforms() {
-
-		auto p = Mat4x4f32::perspective(f32(70_deg), res.cast<Vec2f32>().aspect(), 0.1f, 100.f);
-		auto v = Mat4x4f32::lookDirection(eye, { 0, 0, -1 }, { 0, 1, 0 });
-		auto w = Mat4x4f32::transform(cubePosition, cubeRotation, cubeScale);
-
-		UniformBuffer buffer = {
-			p * v * w,
-			{ 1, 1, 1 }
-		};
-
-		memcpy(uniforms->getBuffer(), &buffer, sizeof(UniformBuffer));
-		uniforms->flush({ { 0, sizeof(UniformBuffer) } });
-	}
-
 	//Update size of surfaces
 
 	void resize(const ViewportInfo*, const Vec2u32 &size) final override {
 
 		res = size;
-		updateUniforms();
 
 		intermediate->onResize(size);
 		gui->resize(size);
@@ -434,8 +448,19 @@ struct TestViewportInterface : public ViewportInterface {
 
 		cubeRotation += f32(5_deg * dt);
 		
-		if(res.neq(0).all())
-			updateUniforms();
+		if (res.neq(0).all()) {
+
+			auto p = Mat4x4f32::perspective(f32(70_deg), res.cast<Vec2f32>().aspect(), 0.1f, 100.f);
+			auto v = Mat4x4f32::lookDirection(eye, { 0, 0, -1 }, { 0, 1, 0 });
+			auto w = Mat4x4f32::transform(cubePosition, cubeRotation, cubeScale);
+
+			UniformBuffer buffer = {
+				p * v * w,
+				{ 1, 1, 1 }
+			};
+
+			memcpy(uniforms->getBuffer(), &buffer, sizeof(UniformBuffer));
+		}
 	}
 };
 

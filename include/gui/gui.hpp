@@ -41,11 +41,7 @@ namespace igx::ui {
 
 		BufferAttributes vertexLayout = { 0, GPUFormat::RG32f, GPUFormat::RG32f, GPUFormat::RGBA8 };	//vec2 pos, vec2 uv, vec4un8 color
 
-		PipelineLayout pipelineLayout = {
-			RegisterLayout(NAME("Input texture"), 0, SamplerType::SAMPLER_2D, 0, ShaderAccess::FRAGMENT),
-			RegisterLayout(NAME("GUI Info"), 1, GPUBufferType::UNIFORM, 0, ShaderAccess::VERTEX_FRAGMENT, sizeof(GUIInfo)),
-			RegisterLayout(NAME("Monitor buffer"), 2, GPUBufferType::STRUCTURED, 0, ShaderAccess::FRAGMENT, sizeof(oic::Monitor)),
-		};
+		PipelineLayoutRef pipelineLayout;
 
 		SetClearColor clearColor{};
 
@@ -59,6 +55,7 @@ namespace igx::ui {
 
 		PipelineRef uiShader;
 		GPUBufferRef guiDataBuffer, guiMonitorBuffer;
+		UploadBufferRef uploadBuffer;
 
 		Graphics *graphics;
 
