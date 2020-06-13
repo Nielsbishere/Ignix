@@ -1,5 +1,5 @@
 #include "graphics/command/commands.hpp"
-#include "helpers/graphics_object_ref.hpp"
+#include "helpers/common.hpp"
 #include "graphics/enums.hpp"
 #include "graphics/graphics.hpp"
 #include "system/viewport_manager.hpp"
@@ -310,20 +310,16 @@ struct TestViewportInterface : public ViewportInterface {
 		
 		cl = { g, NAME("Command list"), CommandList::Info(2_KiB) };
 
-		cl->add(
-			FlushImage(tex2D, uploadBuffer),
-			FlushBuffer(mesh, uploadBuffer)
-		);
-
-		g.execute(cl);
-		cl->clear();
-
 		//Create command list and store our commands
 
 		cl->add(
 
+			//Upload mesh and texture if changes occur (or init time)
+			FlushImage(tex2D, uploadBuffer),
+			FlushBuffer(mesh, uploadBuffer),
+
 			//Update uniforms
-			FlushBuffer(uniforms, nullptr),
+			FlushBuffer(uniforms, nullptr),		//Tell when we want our CPU data to be copied
 
 			//Render to compute shader
 
@@ -336,7 +332,7 @@ struct TestViewportInterface : public ViewportInterface {
 			SetClearColor(Vec4f32(0.586f, 0.129f, 0.949f, 1.0f)),
 			BeginFramebuffer(intermediate),
 			SetViewportAndScissor(),
-			ClearFramebuffer(intermediate),
+			ClearFramebuffer(),
 
 			//TODO: BeginRenderPass instead of BeginFramebuffer
 
@@ -390,6 +386,11 @@ struct TestViewportInterface : public ViewportInterface {
 	void release(const ViewportInfo*) final override {
 		swapchain.release();
 	}
+
+	//TODO: Fix flickering
+	//TODO: Fix crash on exit
+	//TODO: Every execution should copy that command buffer, to ensure resources aren't removed
+	//TODO: Remove the name restriction, since resources can be destroyed on one thread but created on another
 
 	//Update size of surfaces
 
@@ -460,6 +461,7 @@ struct TestViewportInterface : public ViewportInterface {
 			};
 
 			memcpy(uniforms->getBuffer(), &buffer, sizeof(UniformBuffer));
+			uniforms->flush(0, sizeof(UniformBuffer));		//Notify driver that we need an update
 		}
 	}
 };

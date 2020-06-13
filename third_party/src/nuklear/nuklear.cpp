@@ -300,7 +300,10 @@ namespace igx {
 				};
 			}
 			
-			else std::memcpy(data->vbo->getBuffer(), verts.memory.ptr, verts.needed);
+			else if (std::memcmp(data->vbo->getBuffer(), verts.memory.ptr, verts.needed)) {
+				std::memcpy(data->vbo->getBuffer(), verts.memory.ptr, verts.needed);
+				data->vbo->flush(0, verts.needed);
+			}
 
 			//Resize if not enough indices or copy into buffer
 
@@ -326,7 +329,10 @@ namespace igx {
 
 			}
 
-			else std::memcpy(data->ibo->getBuffer(), idx.memory.ptr, idx.needed);
+			else if (std::memcmp(data->ibo->getBuffer(), idx.memory.ptr, idx.needed)) {
+				std::memcpy(data->ibo->getBuffer(), idx.memory.ptr, idx.needed);
+				data->ibo->flush(0, idx.needed);
+			}
 
 			//Recreate primitive buffer
 
@@ -351,31 +357,22 @@ namespace igx {
 
 		nk_buffer_free(&verts);
 		nk_buffer_free(&idx);
-
-		CommandListRef cmd = {
-			g, NAME("UI staging command list"),
-			CommandList::Info(512)
-		};
-
-		if (!data->init) {
-			cmd->add(FlushImage(data->textureAtlas, uploadBuffer));
-			data->init = true;
-		}
-
-		cmd->add(
-			FlushBuffer(data->vbo, uploadBuffer, 0, data->vboSize),
-			FlushBuffer(data->ibo, uploadBuffer, 0, data->iboSize)
-		);
-		
-		g.execute(cmd);
 	}
 
 	//Draw commands
 
 	void GUI::draw() {
 
-		if(data->primitiveBuffer)
-			commands->add(BindPrimitiveBuffer(data->primitiveBuffer));
+		commands->add(
+			FlushImage(data->textureAtlas, uploadBuffer)
+		);
+
+		if (data->primitiveBuffer)
+			commands->add(
+				BindPrimitiveBuffer(data->primitiveBuffer),
+				FlushBuffer(data->vbo, uploadBuffer),
+				FlushBuffer(data->ibo, uploadBuffer)
+			);
 
 		const nk_draw_command *cmd {};
 		nk_draw_index offset {};

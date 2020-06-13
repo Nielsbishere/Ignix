@@ -130,7 +130,7 @@ namespace igx::ui {
 		);
 
 		if (flags & GUI::OWNS_FRAMEBUFFER)
-			commands->add(ClearFramebuffer(target));
+			commands->add(ClearFramebuffer());
 
 	}
 
@@ -153,14 +153,23 @@ namespace igx::ui {
 					mon.sampleB = {};
 				}
 
-			guiMonitorBuffer.release();
-			guiMonitorBuffer = {
-				g, NAME("GUI monitor buffer"),
-				GPUBuffer::Info(
-					Buffer((u8*)mons.data(), (u8*)(mons.data() + mons.size())),
-					GPUBufferType::STRUCTURED, GPUMemoryUsage::CPU_ACCESS
-				)
-			};
+			static constexpr usz maxMonitors = 256;
+
+			if(guiMonitorBuffer.null())
+				guiMonitorBuffer = {
+					g, NAME("GUI monitor buffer"),
+					GPUBuffer::Info(
+						sizeof(mons[0]) * maxMonitors,
+						GPUBufferType::STRUCTURED, GPUMemoryUsage::CPU_ACCESS
+					)
+				};
+
+			usz dataSize = sizeof(mons[0]) * mons.size();
+
+			if (std::memcmp(guiMonitorBuffer->getBuffer(), mons.data(), dataSize)) {
+				std::memcpy(guiMonitorBuffer->getBuffer(), mons.data(), dataSize);
+				guiMonitorBuffer->flush(0, dataSize);
+			}
 
 			descriptors->updateDescriptor(2, { guiMonitorBuffer, 0 });
 			descriptors->flush({ { 2, 1 } });
@@ -175,7 +184,10 @@ namespace igx::ui {
 		}
 
 		if (needsBufferUpdate) {
+
 			std::memcpy(guiDataBuffer->getBuffer(), &info, sizeof(info));
+			guiDataBuffer->flush(0, sizeof(info));
+
 			needsBufferUpdate = false;
 			requestedUpdate = true;
 		}
@@ -188,15 +200,10 @@ namespace igx::ui {
 
 			beginDraw();
 
-			if (requestedUpdate)
-				commands->add(
-					FlushBuffer(guiDataBuffer, uploadBuffer)
-				);
-
-			if (changedMonitors)
-				commands->add(
-					FlushBuffer(guiMonitorBuffer, uploadBuffer)
-				);
+			commands->add(
+				FlushBuffer(guiDataBuffer, uploadBuffer),
+				FlushBuffer(guiMonitorBuffer, uploadBuffer)
+			);
 
 			draw();
 			endDraw();

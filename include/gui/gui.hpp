@@ -1,5 +1,5 @@
 #pragma once
-#include "helpers/graphics_object_ref.hpp"
+#include "helpers/common.hpp"
 #include "utils/hash.hpp"
 #include "window_container.hpp"
 #include "system/viewport_manager.hpp"
