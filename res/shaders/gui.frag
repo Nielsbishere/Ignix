@@ -27,13 +27,8 @@ layout(binding=0, std140) buffer Monitors {
 
 layout(binding=0) uniform sampler2D atlas;
 
-float gammaCorrect(float r){ 
-//	return max(1.055 * pow(r, 0.416666667) - 0.055, 0);		TODO:
-	return r;
-}
-
 float doSample(vec2 subpix, vec2 subpixRes) {
-	return gammaCorrect(texture(atlas, subpix / subpixRes).r);
+	return texture(atlas, subpix / subpixRes).r;
 }
 
 bool pointInMonitor(ivec2 pos, Monitor m) {
@@ -79,7 +74,7 @@ void main() {
 		//Correct for when white needs to be sampled from the atlas
 
 		vec4(
-			gammaCorrect(texture(atlas, uv).r).rrr,
+			texture(atlas, uv).rrr,
 			color.a
 		),
 

@@ -296,8 +296,6 @@ struct TestViewportInterface : public ViewportInterface {
 				pipelineLayout,
 				MSAA(intermediate->getInfo().samples, .2f),
 				DepthStencil::depth()
-
-				//TODO: Parent pipeline / allow parenting (optional)
 			)
 		};
 
@@ -387,10 +385,11 @@ struct TestViewportInterface : public ViewportInterface {
 		swapchain.release();
 	}
 
-	//TODO: Fix flickering
+	//TODO: Fix flickering on resize
 	//TODO: Fix crash on exit
 	//TODO: Every execution should copy that command buffer, to ensure resources aren't removed
 	//TODO: Remove the name restriction, since resources can be destroyed on one thread but created on another
+	//TODO: Figure out when nsight and renderdoc stopped working and why
 
 	//Update size of surfaces
 
