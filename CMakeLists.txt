@@ -30,8 +30,10 @@ add_subdirectory(igxi)
 # Setup test data
 
 set(enableIgxTest TRUE CACHE BOOL "Enable IGX test")
-file(GLOB_RECURSE shaders "res/shaders/*.comp" "res/shaders/*.vert" "res/shaders/*.frag")
+file(GLOB_RECURSE shaders "res/shaders/*.comp" "res/shaders/*.vert" "res/shaders/*.frag" "res/test_shaders/*.comp" "res/test_shaders/*.vert" "res/test_shaders/*.frag")
 file(GLOB_RECURSE shaderBinaries "res/shaders/*.spv")
+file(GLOB_RECURSE shaderTestBinaries "res/test_shaders/*.spv")
+file(GLOB_RECURSE fonts "res/fonts/*.ttf")
 
 # Nuklear dependency
 
@@ -88,18 +90,50 @@ else()
     target_compile_options(igx PRIVATE -Wall -fms-extensions -Wextra -Werror)
 endif()
 
+# Add file dependencies ; the builtin shaders and fonts
+	
+add_virtual_files(
+	DIRECTORY
+		${CMAKE_SOURCE_DIR}/res/shaders
+	NAME
+		igx/shaders
+	FILES
+		${shaderBinaries}
+)
+
+add_virtual_files(
+	DIRECTORY
+		${CMAKE_SOURCE_DIR}/res/fonts
+	NAME
+		igx/fonts
+	FILES
+		${fonts}
+)
+
+#
+
 if(enableIgxTest)
 
 	add_executable(igx_test ${testsCpp})
 	target_link_libraries(igx_test PUBLIC igx)
+
+	add_virtual_files(
+		DIRECTORY
+			${CMAKE_SOURCE_DIR}/res/test_shaders
+		NAME
+			shaders
+		FILES
+			${shaderTestBinaries}
+	)
+
+	configure_icon(igx_test "${CMAKE_SOURCE_DIR}/res/icon.ico")
+	configure_virtual_files(igx_test)
 
 	if(WIN32)
 		add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.bat ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
 	else()
 		add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
 	endif()
-
-	set_property(TARGET igx_test PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res")
 
 	if(MSVC)
 		target_compile_options(igx_test PRIVATE /W4 /WX /MD /MP /wd4201 /EHsc /GR)

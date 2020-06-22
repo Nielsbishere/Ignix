@@ -194,7 +194,7 @@ struct TestViewportInterface : public ViewportInterface {
 		//(Compute output 512x512)
 
 		Buffer comp;
-		bool success = oic::System::files()->read("./shaders/test.comp.spv", comp);
+		bool success = oic::System::files()->read(FILE_PATH("~/shaders/test.comp.spv"), comp);
 
 		if (!success)
 			oic::System::log()->fatal("Couldn't find compute shader");
@@ -237,8 +237,8 @@ struct TestViewportInterface : public ViewportInterface {
 		//(Mask shader)
 
 		Buffer vert, frag;
-		success =	oic::System::files()->read("./shaders/test.vert.spv", vert);
-		success		&=	oic::System::files()->read("./shaders/test.frag.spv", frag);
+		success =	oic::System::files()->read(FILE_PATH("~/shaders/test.vert.spv"), vert);
+		success		&=	oic::System::files()->read(FILE_PATH("~/shaders/test.frag.spv"), frag);
 
 		if (!success)
 			oic::System::log()->fatal("Couldn't find shaders");
