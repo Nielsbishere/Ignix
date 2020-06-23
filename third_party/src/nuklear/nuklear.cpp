@@ -148,7 +148,7 @@ namespace igx {
 		nk_font_atlas_begin(&atlas);
 
 		Buffer font;
-		oicAssert("GUI font required", oic::System::files()->read(FILE_PATH("~/igx/fonts/calibri.ttf"), font));
+		oicAssert("GUI font required", oic::System::files()->read(VIRTUAL_FILE("~/igx/fonts/calibri.ttf"), font));
 
 		data->font = nk_font_atlas_add_from_memory(&atlas, font.data(), font.size(), 13, nullptr);
 
