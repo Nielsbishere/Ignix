@@ -94,7 +94,7 @@ endif()
 	
 add_virtual_files(
 	DIRECTORY
-		${CMAKE_SOURCE_DIR}/res/shaders
+		${CMAKE_CURRENT_SOURCE_DIR}/res/shaders
 	NAME
 		igx/shaders
 	FILES
@@ -103,7 +103,7 @@ add_virtual_files(
 
 add_virtual_files(
 	DIRECTORY
-		${CMAKE_SOURCE_DIR}/res/fonts
+		${CMAKE_CURRENT_SOURCE_DIR}/res/fonts
 	NAME
 		igx/fonts
 	FILES
@@ -119,20 +119,20 @@ if(enableIgxTest)
 
 	add_virtual_files(
 		DIRECTORY
-			${CMAKE_SOURCE_DIR}/res/test_shaders
+			${CMAKE_CURRENT_SOURCE_DIR}/res/test_shaders
 		NAME
 			shaders
 		FILES
 			${shaderTestBinaries}
 	)
 
-	configure_icon(igx_test "${CMAKE_SOURCE_DIR}/res/icon.ico")
+	configure_icon(igx_test "${CMAKE_CURRENT_SOURCE_DIR}/res/icon.ico")
 	configure_virtual_files(igx_test)
 
 	if(WIN32)
-		add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.bat ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
+		add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.bat ${shaders} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders")
 	else()
-		add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/res/shaders")
+		add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders")
 	endif()
 
 	if(MSVC)
