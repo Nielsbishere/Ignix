@@ -20,20 +20,23 @@ file(GLOB_RECURSE depsCpp "third_party/src/*.cpp")
 
 file(GLOB_RECURSE testsCpp "test/*.cpp")
 
-if("$ENV{VULKAN_SDK}" STREQUAL "")
-	message(FATAL_ERROR "Ignix requires the Vulkan SDK so it can compile the shaders with SPIR-V")
-endif()
-
 add_subdirectory(ignis)
 add_subdirectory(igxi)
 
 # Setup test data
 
+set(doShaderRecreate TRUE CACHE BOOL "Enable shader recompilation")
 set(enableIgxTest TRUE CACHE BOOL "Enable IGX test")
 file(GLOB_RECURSE shaders "res/shaders/*.comp" "res/shaders/*.vert" "res/shaders/*.frag" "res/test_shaders/*.comp" "res/test_shaders/*.vert" "res/test_shaders/*.frag")
 file(GLOB_RECURSE shaderBinaries "res/shaders/*.spv")
 file(GLOB_RECURSE shaderTestBinaries "res/test_shaders/*.spv")
 file(GLOB_RECURSE fonts "res/fonts/*.ttf")
+
+if(doShaderRecreate)
+	if("$ENV{VULKAN_SDK}" STREQUAL "")
+		message(FATAL_ERROR "Ignix requires the Vulkan SDK so it can compile the shaders with SPIR-V")
+	endif()
+endif()
 
 # Nuklear dependency
 
@@ -128,11 +131,13 @@ if(enableIgxTest)
 
 	configure_icon(igx_test "${CMAKE_CURRENT_SOURCE_DIR}/res/icon.ico")
 	configure_virtual_files(igx_test)
-
-	if(WIN32)
-		add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.bat ${shaders} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders")
-	else()
-		add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders")
+	
+	if(doShaderRecreate)
+		if(WIN32)
+			add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.bat ${shaders} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders")
+		else()
+			add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders")
+		endif()
 	endif()
 
 	if(MSVC)
