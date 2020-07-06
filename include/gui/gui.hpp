@@ -17,6 +17,8 @@ namespace igx::ui {
 		Vec2f32 whiteTexel;		//uv position of a pure "white" texel (so no subpixel filtering is applied)
 	};
 
+	apimpl struct GUIData;
+
 	//Renders GUI into a framebuffer
 	//You create the GUI through this interface and pass this final UI to the present
 	//
@@ -59,8 +61,7 @@ namespace igx::ui {
 
 		Graphics *graphics;
 
-		struct Data;
-		Data *data{};						//Implementation dependent data
+		GUIData *data{};						//Implementation dependent data
 		usz commandListSize{};
 
 		Flags flags;
@@ -71,7 +72,7 @@ namespace igx::ui {
 
 		void bakePrimitives(Graphics &g);	//Fills vertex/index buffer
 		bool prepareDrawData();				//Returns true if it should bake primitive data
-		void renderWindows(List<Window*> &windows);
+		void renderWindows(List<Window> &windows);
 		void draw();						//Called to fill the command list
 
 		void initData(Graphics &g);			//Init implementation dependent data and descriptors/textures

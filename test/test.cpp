@@ -7,6 +7,7 @@
 #include "system/local_file_system.hpp"
 #include "gui/gui.hpp"
 #include "gui/window.hpp"
+#include "gui/struct_inspector.hpp"
 #include "types/mat.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
@@ -15,6 +16,9 @@
 using namespace igx::ui;
 using namespace igx;
 using namespace oic;
+
+oicExposedEnum(BiomeType, u8, Large_biome, Small_biome);
+oicExposedEnum(Difficulty, u8, Easy, Normal, Hard, Hardcore);
 
 struct TestViewportInterface : public ViewportInterface {
 
@@ -51,6 +55,49 @@ struct TestViewportInterface : public ViewportInterface {
 		Mat4x4f32 pvw;
 		Vec3f32 mask;
 	};
+
+	//Testing sliders and everything
+	
+	struct TestStruct0 {
+
+		inline void click() {
+			oic::System::log()->debug("Play");
+		}
+
+		Button<TestStruct0, &click> Play;
+		RadioButtons<Difficulty> Difficulty;
+		Checkbox Silver, Bronze, Gold = true;
+		Dropdown<BiomeType> Biome_type = BiomeType::Small_biome;
+
+		//MinMaxSliderBase<f32, 0, 1> Volume = .5f;
+		//MinMaxProgress<f32, 0, 100, 0.1> Progress;
+
+		Inflect(Play, Difficulty, Silver, Bronze, Gold, Biome_type/*, Volume, Progress*/);
+	};
+
+	struct TestStruct1 {
+
+		//Progress<u8, 4> Compressed_chunk_width, Compressed_chunk_height;
+
+		Checkbox Optimize_size, Optimize_quality;
+
+		Dropdown<Key> Keyboard_shortcut;
+		Dropdown<MouseButton> Mouse_shortcut;
+
+		oic::FileSystem *fs = oic::System::files();
+
+		Inflect(/*Compressed_chunk_width, Compressed_chunk_height,*/ Optimize_size, Optimize_quality, Keyboard_shortcut, Mouse_shortcut, fs);
+	};
+
+	//TODO: Fix leak!
+	//TODO: Some crash
+	//TODO: Format names
+
+	using StructInspector0 = StructInspector<TestStruct0>;
+	using StructInspector1 = StructInspector<TestStruct1>;
+
+	StructInspector0 structInspector0;
+	StructInspector1 structInspector1;
 
 	//Create resources
 
@@ -350,8 +397,8 @@ struct TestViewportInterface : public ViewportInterface {
 
 		gui = new GUI(g, intermediate);
 		
-		gui->addWindow(new Window("", 0, {}, { 200, 350 }, Window::STATIC_NO_MENU));
-		gui->addWindow(new Window("Test", 1, { 50, 50 }, { 200, 350 }));
+		gui->addWindow(Window("", 0, {}, { 200, 350 }, &structInspector0, Window::STATIC_NO_MENU));
+		gui->addWindow(Window("Test", 1, { 50, 50 }, { 200, 350 }, &structInspector1));
 
 		//Release the graphics instance for us until we need it again
 
@@ -426,18 +473,18 @@ struct TestViewportInterface : public ViewportInterface {
 		for(auto *dvc : vi->devices)
 			if (dvc->isType(InputDevice::KEYBOARD)) {
 
-				if (dvc->isDown(Key::KEY_W)) d += Vec3f32(0, 0, -1);
-				if (dvc->isDown(Key::KEY_S)) d += Vec3f32(0, 0, 1);
+				if (dvc->isDown(Key::Key_w)) d += Vec3f32(0, 0, -1);
+				if (dvc->isDown(Key::Key_s)) d += Vec3f32(0, 0, 1);
 
-				if (dvc->isDown(Key::KEY_Q)) d += Vec3f32(0, -1, 0);
-				if (dvc->isDown(Key::KEY_E)) d += Vec3f32(0, 1, 0);
+				if (dvc->isDown(Key::Key_q)) d += Vec3f32(0, -1, 0);
+				if (dvc->isDown(Key::Key_e)) d += Vec3f32(0, 1, 0);
 
-				if (dvc->isDown(Key::KEY_D)) d += Vec3f32(1, 0, 0);
-				if (dvc->isDown(Key::KEY_A)) d += Vec3f32(-1, 0, 0);
+				if (dvc->isDown(Key::Key_d)) d += Vec3f32(1, 0, 0);
+				if (dvc->isDown(Key::Key_a)) d += Vec3f32(-1, 0, 0);
 
 			} else if (dvc->isType(InputDevice::MOUSE)) {
 
-				f64 delta = dvc->getCurrentAxis(MouseAxis::AXIS_WHEEL);
+				f64 delta = dvc->getCurrentAxis(MouseAxis::Axis_wheel);
 
 				if(delta)
 					speed = oic::Math::clamp(speed * 1 + (delta / 1024), 0.5, 5.0);

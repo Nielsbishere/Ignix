@@ -1,8 +1,13 @@
 #pragma once
 #include "types/vec.hpp"
-#include "window_container.hpp"
 
 namespace igx::ui {
+
+	struct GUIData;
+
+	struct WindowInterface {
+		virtual void render(GUIData *data) = 0;
+	};
 
 	class Window /*: public ElementContainer*/ {
 
@@ -46,12 +51,14 @@ namespace igx::ui {
 
 		Flags flags;
 
+		WindowInterface *interface;
+
 	public:
 
 		//Create a window at a pixel position
 		Window(
 			const String &name, const u32 id, const Vec2f32 &pos,
-			const Vec2f32 &dim, Flags flags = DEFAULT
+			const Vec2f32 &dim, WindowInterface *interface, Flags flags = DEFAULT
 		);
 
 		//Setters
@@ -74,6 +81,11 @@ namespace igx::ui {
 
 		inline bool visible() const { return flags & VISIBLE; }
 
+		inline void render(GUIData *data) const {
+			if (interface) interface->render(data);
+		}
+
+		inline bool operator==(const Window &window) const { return id == window.id; }
 	};
 
 	//Implementations

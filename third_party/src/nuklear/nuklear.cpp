@@ -14,6 +14,13 @@
 #define NK_MEMCPY std::memcpy
 #define NK_MEMSET std::memset
 
+#include "system/system.hpp"
+#include "system/log.hpp"
+
+#define NK_ASSERT(...) oicAssert("Assert failed", __VA_ARGS__)
+#define NK_ERROR(...) oic::System::log()->fatal(__VA_ARGS__)
+#define NK_UINT_DRAW_INDEX
+
 #define NK_IMPLEMENTATION
 
 #include "Nuklear/nuklear.h"
@@ -24,6 +31,7 @@
 #include "input/mouse.hpp"
 #include "input/keyboard.hpp"
 #include "gui/gui.hpp"
+#include "gui/struct_inspector.hpp"
 #include "gui/window.hpp"
 #include "utils/math.hpp"
 #include "utils/timer.hpp"
@@ -59,30 +67,30 @@ void nkFree(nk_handle, u8 *old) {
 
 oicExposedEnum(
 	NMouseButton, int,
-	BUTTON_LEFT,
-	BUTTON_MIDDLE,
-	BUTTON_RIGHT
+	Button_left,
+	Button_middle,
+	Button_right
 )
 
 oicExposedEnum(
 	NKey, int,
-	KEY_SHIFT = NK_KEY_SHIFT,
-	KEY_CTRL = NK_KEY_CTRL,
-	KEY_DELETE = NK_KEY_DEL,
-	KEY_ENTER = NK_KEY_ENTER,
-	KEY_TAB = NK_KEY_TAB,
-	KEY_BACKSPACE = NK_KEY_BACKSPACE,
-	KEY_UP = NK_KEY_UP,
-	KEY_DOWN = NK_KEY_DOWN,
-	KEY_LEFT = NK_KEY_LEFT,
-	KEY_RIGHT = NK_KEY_RIGHT
+	Key_shift = NK_KEY_SHIFT,
+	Key_ctrl = NK_KEY_CTRL,
+	Key_delete = NK_KEY_DEL,
+	Key_enter = NK_KEY_ENTER,
+	Key_tab = NK_KEY_TAB,
+	Key_backspace = NK_KEY_BACKSPACE,
+	Key_up = NK_KEY_UP,
+	Key_down = NK_KEY_DOWN,
+	Key_left = NK_KEY_LEFT,
+	Key_right = NK_KEY_RIGHT
 );
 
 //GUI implementation for nuklear
 
-namespace igx {
+namespace igx::ui {
 
-	struct GUI::Data {
+	struct GUIData {
 
 		static constexpr usz MAX_MEMORY = 32_KiB;
 
@@ -132,10 +140,10 @@ namespace igx {
 
 		//Allocate memory
 
-		data = oic::System::allocator()->alloc<Data>();
+		data = oic::System::allocator()->alloc<GUIData>();
 
 		data->ctx = oic::System::allocator()->alloc<nk_context>();
-		data->current.resize(Data::MAX_MEMORY);
+		data->current.resize(GUIData::MAX_MEMORY);
 
 		data->allocator.alloc = &nkAlloc;
 		data->allocator.free = (nk_plugin_free)&nkFree;
@@ -181,7 +189,7 @@ namespace igx {
 
 		//Init nk
 
-		nk_init_fixed(data->ctx, data->current.data(), Data::MAX_MEMORY, &data->font->handle);
+		nk_init_fixed(data->ctx, data->current.data(), GUIData::MAX_MEMORY, &data->font->handle);
 
 		/* TODO: Style
 		auto &style = data->ctx->style;
@@ -344,7 +352,7 @@ namespace igx {
 					g, NAME("Primitive buffer"),
 					PrimitiveBuffer::Info(
 						BufferLayout(data->vbo, vertexLayout),
-						BufferLayout(data->ibo, BufferAttributes(0, GPUFormat::R16u))
+						BufferLayout(data->ibo, BufferAttributes(0, GPUFormat::R32u))
 					)
 				};
 			}
@@ -414,8 +422,8 @@ namespace igx {
 
 		} else if (dvc->getType() == InputDevice::Type::MOUSE) {
 
-			f64 x = dvc->getCurrentAxis(MouseAxis::AXIS_X);
-			f64 y = dvc->getCurrentAxis(MouseAxis::AXIS_Y);
+			f64 x = dvc->getCurrentAxis(MouseAxis::Axis_x);
+			f64 y = dvc->getCurrentAxis(MouseAxis::Axis_y);
 
 			//Buttons
 			if (ih < MouseButton::count) {
@@ -435,12 +443,12 @@ namespace igx {
 
 				usz axis = ih - MouseButton::count;
 
-				if (axis == MouseAxis::AXIS_WHEEL) {
-					nk_input_scroll(data->ctx, nk_vec2(f32(dvc->getCurrentAxis(MouseAxis::AXIS_WHEEL)), 0));
+				if (axis == MouseAxis::Axis_wheel) {
+					nk_input_scroll(data->ctx, nk_vec2(f32(dvc->getCurrentAxis(MouseAxis::Axis_wheel)), 0));
 					return true;
 				}
 
-				else if (axis == MouseAxis::AXIS_X || axis == MouseAxis::AXIS_Y) {
+				else if (axis == MouseAxis::Axis_x || axis == MouseAxis::Axis_y) {
 					nk_input_motion(data->ctx, int(x), int(y));
 					return true;
 				}
@@ -453,23 +461,72 @@ namespace igx {
 
 	//Nuklear test
 
-	void GUI::renderWindows(List<Window*> &ws) {
+	bool StructRenderer::doButton(const String &name) {
+		return nk_button_label(data->ctx, name.data());
+	}
 
-		static c8 const * names[] = {
-			"Large biome",
-			"Small biome"
-		};
+	void StructRenderer::doCheckbox(const String &name, Checkbox &checkbox){
+		int active = checkbox.value;
+		nk_checkbox_label(data->ctx, name.c_str(), &active);
+		checkbox.value = active;
+	}
 
-		enum Difficulty : u8 { EASY, NORMAL, HARD };
+	//TODO: size of combo box and of line should be changable in a layout or something
 
-		struct UIData {
-			int op = 0, active[3] { 1, 0, 1 }, selected{};
-			float value = 0.6f;
-			usz test{};
-			int selected0{};
-		};
+	void StructRenderer::doDropdown(const String&, usz &index, const List<const c8*> &names) {
 
-		static HashMap<Window*, UIData> uiData;
+		auto *ctx = data->ctx;
+
+		int selected = int(index);
+
+		nk_combobox(ctx, names.data(), int(names.size()), &selected, 30, nk_vec2(150, 200));
+
+		index = usz(selected);
+	}
+
+	void StructRenderer::doRadioButtons(const String&, usz &index, const List<const c8*> &names) {
+		for (usz i = 0; i < names.size(); ++i)
+			if (nk_option_label(data->ctx, names[i], index == i))
+				index = i;
+	}
+
+	usz StructRenderer::doFileSystem(oic::FileSystem *&fs, oic::FileHandle handle, const String &path, usz &selected) {
+
+		oicAssert("Local file system is not supported yet", path.empty());
+
+		FileInfo info = fs->getVirtualFiles()[handle];
+
+		if (nk_tree_element_push_id(data->ctx, NK_TREE_NODE, info.path.c_str(), NK_MINIMIZED, (int*)&selected, (int)handle)) {
+
+			if (info.isFolder())
+				for (FileHandle i = info.folderHint; i != info.fileEnd; ++i)
+					doFileSystem(fs, i, path, selected);
+
+			nk_tree_pop(data->ctx);
+		}
+
+		return handle;
+	}
+
+	void StructRenderer::doFileSystem(const String &name, oic::FileSystem *&fs) {
+
+		fs->lock();
+
+		if (nk_tree_push_id(data->ctx, NK_TREE_TAB, name.c_str(), NK_MINIMIZED, 0)) {
+
+			usz selected{};
+
+			//Go through virtual path
+
+			doFileSystem(fs, 0, "", selected);
+
+			nk_tree_pop(data->ctx);
+		}
+
+		fs->unlock();
+	}
+
+	void GUI::renderWindows(List<Window> &ws) {
 
 		auto *ctx = data->ctx;
 
@@ -478,10 +535,10 @@ namespace igx {
 
 		usz i{};
 
-		for (Window *w : ws) {
+		for (Window &w : ws) {
 
 			using Flags = Window::Flags;
-			Flags flag = w->getFlags();
+			Flags flag = w.getFlags();
 			nk_flags nkFlags{};
 
 			if (!(flag & Flags::INPUT))			nkFlags |= NK_WINDOW_NO_INPUT;
@@ -494,77 +551,34 @@ namespace igx {
 			if (flag & Flags::BORDER)			nkFlags |= NK_WINDOW_BORDER;
 			if (flag & Flags::SCROLL_AUTO_HIDE)	nkFlags |= NK_WINDOW_SCROLL_AUTO_HIDE;
 
-			struct nk_rect rect = nk_rect(w->getPos().x, w->getPos().y, w->getDim().x, w->getDim().y);
+			struct nk_rect rect = nk_rect(w.getPos().x, w.getPos().y, w.getDim().x, w.getDim().y);
 
-			if (nk_window *wnd = nk_add_window(ctx, w->getId(), w->getTitle().c_str(), rect, nkFlags)) {
+			if (nk_window *wnd = nk_add_window(ctx, w.getId(), w.getTitle().c_str(), rect, nkFlags)) {
 
 				if (!nk_window_has_contents(wnd)) {
 
-					if (wnd->flags & NK_WINDOW_CLOSED) {
-						delete w;
+					if (wnd->flags & NK_WINDOW_CLOSED)
 						marked.insert(marked.begin(), i);
-					}
 					else
-						w->setVisible(false);
+						w.setVisible(false);
 
 					nk_end(ctx);
 					++i;
 					continue;
 				}
 
-				w->setVisible(true);
+				w.setVisible(true);
 
 				Vec2f32 dim = { wnd->bounds.w, wnd->bounds.h };
 
-				w->updateLocation(Vec2f32(wnd->bounds.x, wnd->bounds.y), dim);
+				w.updateLocation(Vec2f32(wnd->bounds.x, wnd->bounds.y), dim);
 
-				auto &dat = uiData[w];
-				auto &op = dat.op;
-				auto &active = dat.active;
-				auto &selected = dat.selected;
-				auto &value = dat.value;
-				auto &test = dat.test;
-
-				// fixed widget pixel width
-				nk_layout_row_static(ctx, 30, 150, 1);
-				if (nk_button_label(ctx, "Play"))
-					oic::System::log()->debug("Hi");
-
-				if (nk_tree_push_id(ctx, NK_TREE_TAB, "application", NK_MINIMIZED, 0)) {
-
-					if (nk_tree_element_push_id(ctx, NK_TREE_NODE, "test", NK_MINIMIZED, &dat.selected0, 0)) {
-						nk_tree_element_pop(ctx);
-					}
-
-					nk_tree_pop(ctx);
-				}
-
-				// fixed widget window ratio width
-				nk_layout_row_static(ctx, 30, 75, 2);
-				if (nk_option_label(ctx, "Easy", op == EASY)) op = EASY;
-				if (nk_option_label(ctx, "Normal", op == NORMAL)) op = NORMAL;
-				if (nk_option_label(ctx, "Hard", op == HARD)) op = HARD;
-
-				nk_layout_row_static(ctx, 30, 75, 2);
-				nk_checkbox_label(ctx, "Silver", active);
-				nk_checkbox_label(ctx, "Bronze", active + 1);
-				nk_checkbox_label(ctx, "Gold", active + 2);
+				//TODO: integrade layouts
+				//TODO: labels for members
 
 				nk_layout_row_static(ctx, 30, 150, 1);
-				nk_combobox(ctx, names, int(sizeof(names) / sizeof(names[0])), &selected, 30, nk_vec2(150, 200));
 
-				// custom widget pixel width
-				nk_layout_row_begin(ctx, NK_DYNAMIC, 30, 2);
-				{
-					nk_layout_row_push(ctx, 0.25f);
-					nk_label(ctx, "Volume:", NK_TEXT_LEFT);
-					nk_layout_row_push(ctx, 0.75f);
-					nk_slider_float(ctx, 0, &value, 1.0f, 0.01f);
-				}
-				nk_layout_row_end(ctx);
-
-				nk_layout_row_static(ctx, 30, 150, 1);
-				nk_progress(ctx, &test, 100, 1);
+				w.render(data);
 			}
 
 			nk_end(ctx);
@@ -572,8 +586,8 @@ namespace igx {
 			++i;
 		}
 
-		for (usz j : marked)
-			ws.erase(ws.begin() + j);
+		for (auto rit = marked.rbegin(), rend = marked.rend(); rit != rend; ++rit)
+			ws.erase(ws.begin() + *rit);
 
 	}
 
