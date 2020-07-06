@@ -11,6 +11,9 @@
 #define NK_INCLUDE_FONT_BAKING
 #define NK_ENABLE_SUBPIXEL_API
 
+#define NK_UINT_DRAW_INDEX
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+
 #define NK_MEMCPY std::memcpy
 #define NK_MEMSET std::memset
 
@@ -19,7 +22,6 @@
 
 #define NK_ASSERT(...) oicAssert("Assert failed", __VA_ARGS__)
 #define NK_ERROR(...) oic::System::log()->fatal(__VA_ARGS__)
-#define NK_UINT_DRAW_INDEX
 
 #define NK_IMPLEMENTATION
 
@@ -496,7 +498,7 @@ namespace igx::ui {
 
 		FileInfo info = fs->getVirtualFiles()[handle];
 
-		if (nk_tree_element_push_id(data->ctx, NK_TREE_NODE, info.path.c_str(), NK_MINIMIZED, (int*)&selected, (int)handle)) {
+		if (nk_tree_element_push_id(data->ctx, info.isFolder() ? NK_TREE_NODE : NK_TREE_CHILD, info.path.c_str(), NK_MINIMIZED, (int*)&selected, (int)handle)) {
 
 			if (info.isFolder())
 				for (FileHandle i = info.folderHint; i != info.fileEnd; ++i)
