@@ -66,27 +66,53 @@ struct TestViewportInterface : public ViewportInterface {
 
 		Button<TestStruct0, &click> Play;
 		RadioButtons<Difficulty> Difficulty;
-		Checkbox Silver, Bronze, Gold = true;
+		bool Silver, Bronze, Gold = true;
 		Dropdown<BiomeType> Biome_type = BiomeType::Small_biome;
 
 		//MinMaxSliderBase<f32, 0, 1> Volume = .5f;
 		//MinMaxProgress<f32, 0, 100, 0.1> Progress;
 
-		Inflect(Play, Difficulty, Silver, Bronze, Gold, Biome_type/*, Volume, Progress*/);
+		Inflect(
+			Play, 
+			Difficulty, 
+			Silver, Bronze, Gold,
+			Biome_type
+			/*, Volume, Progress*/
+		);
 	};
 
 	struct TestStruct1 {
 
 		//Progress<u8, 4> Compressed_chunk_width, Compressed_chunk_height;
 
-		Checkbox Optimize_size, Optimize_quality;
+		bool Optimize_size, Optimize_quality;
 
 		Dropdown<Key> Keyboard_shortcut;
 		Dropdown<MouseButton> Mouse_shortcut;
 
-		oic::FileSystem *fs = oic::System::files();
+		oic::FileSystem *Files = oic::System::files();
 
-		Inflect(/*Compressed_chunk_width, Compressed_chunk_height,*/ Optimize_size, Optimize_quality, Keyboard_shortcut, Mouse_shortcut, fs);
+		List<TestStruct0> Games{ {}, {} };
+
+		u8 Test = 11;
+		u8 Test_u8 = u8_MAX;
+		i8 Test_i8 = i8_MIN;
+		u16 Test_u16 = u16_MAX;
+		i16 Test_i16 = i16_MIN;
+		u32 Test_u32 = u32_MAX;
+		i32 Test_i32 = i32_MIN;
+		u64 Test_u64 = u64_MAX;
+		i64 Test_i64 = i64_MIN;
+
+		Inflect(
+			/*Compressed_chunk_width, Compressed_chunk_height,*/ 
+			Optimize_size, Optimize_quality, 
+			Files,
+			Test, Test_u8, Test_i8, Test_u16, Test_i16,
+			Test_u32, Test_i32, Test_u64, Test_i64,
+			Keyboard_shortcut, Mouse_shortcut,
+			Games
+		);
 	};
 
 	//TODO: Fix leak!

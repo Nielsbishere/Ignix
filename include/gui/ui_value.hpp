@@ -242,8 +242,6 @@ namespace igx::ui {
 
 	//Boolean container
 
-	using Checkbox = ValueContainer<bool>;
-
 	template<typename T, void (T::*x)()>
 	struct Button { 
 		static inline void call(T *v) {

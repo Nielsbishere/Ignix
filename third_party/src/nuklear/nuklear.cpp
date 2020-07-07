@@ -461,16 +461,156 @@ namespace igx::ui {
 		return false;
 	}
 
-	//Nuklear test
+	//Nuklear renderer
 
 	bool StructRenderer::doButton(const String &name) {
+		nk_layout_row_dynamic(data->ctx, 30, 1);
 		return nk_button_label(data->ctx, name.data());
 	}
 
-	void StructRenderer::doCheckbox(const String &name, Checkbox &checkbox){
-		int active = checkbox.value;
+	void StructRenderer::doCheckbox(const String &name, bool &checkbox){
+
+		nk_layout_row_dynamic(data->ctx, 30, 2);
+
+		int active = checkbox;
 		nk_checkbox_label(data->ctx, name.c_str(), &active);
-		checkbox.value = active;
+		checkbox = active;
+	}
+
+	void StructRenderer::doStruct(const String &) {
+		nk_layout_row_dynamic(data->ctx, 30, 2);
+	}
+
+	void StructRenderer::doInt(const String &name, isz byteSize, usz required, void *loc) {
+
+		auto &temporaryData = map->operator[](loc);
+		temporaryData.isStillPresent = true;
+
+		//Setup data and filter out invalid data
+
+		usz ubyteSize = std::abs(byteSize);
+		auto &len = *(int*)temporaryData.data;
+
+		if (
+			temporaryData.heapData.size() != required + ubyteSize + 1 || 
+			std::memcmp(temporaryData.heapData.data(), loc, ubyteSize)
+		) {
+
+			//Reset data
+
+			temporaryData.heapData.resize(required + ubyteSize + 1);
+			std::memcpy(temporaryData.heapData.data(), loc, ubyteSize);
+
+			//Init string
+
+			std::stringstream ss;
+
+			switch (byteSize) {
+				case 1: ss << (u16)*(u8*)loc;		break;
+				case -1: ss << (i16)*(i8*)loc;		break;
+				case 2: ss << *(u16*)loc;			break;
+				case -2: ss << *(i16*)loc;			break;
+				case 4: ss << *(u32*)loc;			break;
+				case -4: ss << *(i32*)loc;			break;
+				case 8: ss << *(u64*)loc;			break;
+				case -8: ss << *(i64*)loc;
+			}
+
+			String str = ss.str();
+
+			oicAssert("Unexpected int string out of bounds", str.size() <= required);
+
+			//Copy and set null to the end of the string
+
+			std::memcpy(temporaryData.heapData.data() + ubyteSize, str.data(), str.size());
+
+			usz leftOver = required - str.size() + 1;
+
+			if(leftOver)
+				std::memset(temporaryData.heapData.data() + ubyteSize + str.size(), 0, leftOver);
+
+			//Store length
+
+			len = (int) str.size();
+		}
+
+		if (len < 0 || len > required)
+			len = 0;
+
+		//TODO: nkFilter = nk_filter_hex
+		//TODO: Ignore - if unsigned, otherwise only allow at front
+		//TODO: Callbacks for runes, so input can be used
+
+		//Edit string
+
+		nk_layout_row_dynamic(data->ctx, 30, 2);
+
+		nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+
+		nk_edit_string(
+			data->ctx, NK_EDIT_FIELD, 
+			(char*)(temporaryData.heapData.data() + ubyteSize), 
+			&len, (int)required + 1, 
+			nk_filter_decimal
+		);
+
+		//Output
+
+		const c8 *start = (const c8*)(temporaryData.heapData.data() + ubyteSize);
+
+		std::stringstream ss(String(start, start + len));
+		
+		switch (byteSize) {
+
+			case 2: ss >> *(u16*)loc;			break;
+			case -2: ss >> *(i16*)loc;			break;
+			case 4: ss >> *(u32*)loc;			break;
+			case -4: ss >> *(i32*)loc;			break;
+			case 8: ss >> *(u64*)loc;			break;
+			case -8: ss >> *(i64*)loc;			break;
+
+			case 1: {
+				u16 temp;
+				if (ss >> temp) *(u8*)loc = u8(temp);
+				break;
+			}
+
+			case -1: {
+				i16 temp;
+				if (ss >> temp) *(i8*)loc = i8(temp);
+			}
+		}
+
+	}
+
+	void *StructRenderer::beginList(const String &name, usz count, void *loc) {
+
+		//TODO: Scrollbar
+
+		nk_layout_row_dynamic(data->ctx, 400, 1);
+
+		//Get nk_list_view from temporary data
+
+		auto &temporaryData = map->operator[](loc);
+		temporaryData.isStillPresent = true;
+		
+		if (temporaryData.heapData.size() != sizeof(nk_list_view))
+			temporaryData.heapData.resize(sizeof(nk_list_view));
+
+		auto v = (nk_list_view*)temporaryData.heapData.data();
+
+		//(No need to clear since nk_list_view_begin sets it
+
+		if (nk_list_view_begin(data->ctx, (nk_list_view*)v, name.c_str(), NK_WINDOW_BORDER, 25, (int)count)) {
+			nk_layout_row_dynamic(data->ctx, 30, 2);
+			return v;
+		}
+
+		return nullptr;
+	}
+
+	void StructRenderer::endList(void *ptr) {
+		nk_list_view_end((nk_list_view*)ptr);
 	}
 
 	//TODO: size of combo box and of line should be changable in a layout or something
@@ -481,18 +621,29 @@ namespace igx::ui {
 
 		int selected = int(index);
 
+		if (selected < 0 || selected >= names.size()) 
+			selected = 0;		//Avoid garbage data
+
+		//TODO: Opening two after each other seems to infinite loop?
+
+		nk_layout_row_dynamic(data->ctx, 30, 1);
+
 		nk_combobox(ctx, names.data(), int(names.size()), &selected, 30, nk_vec2(150, 200));
 
 		index = usz(selected);
 	}
 
 	void StructRenderer::doRadioButtons(const String&, usz &index, const List<const c8*> &names) {
+		
+		nk_layout_row_static(data->ctx, 30, 75, 2);
+
 		for (usz i = 0; i < names.size(); ++i)
 			if (nk_option_label(data->ctx, names[i], index == i))
 				index = i;
+
 	}
 
-	usz StructRenderer::doFileSystem(oic::FileSystem *&fs, oic::FileHandle handle, const String &path, usz &selected) {
+	usz StructRenderer::doFileSystem(oic::FileSystem *&fs, oic::FileHandle handle, const String &path, u32 &selected) {
 
 		oicAssert("Local file system is not supported yet", path.empty());
 
@@ -516,17 +667,22 @@ namespace igx::ui {
 
 		if (nk_tree_push_id(data->ctx, NK_TREE_TAB, name.c_str(), NK_MINIMIZED, 0)) {
 
-			usz selected{};
+			//Reserve temporary data
+
+			auto &temporaryData = map->operator[](&fs);
+			temporaryData.isStillPresent = true;
 
 			//Go through virtual path
 
-			doFileSystem(fs, 0, "", selected);
+			doFileSystem(fs, 0, "", *(u32*)temporaryData.data);
 
 			nk_tree_pop(data->ctx);
 		}
 
 		fs->unlock();
 	}
+
+	//Rendering windows
 
 	void GUI::renderWindows(List<Window> &ws) {
 
@@ -578,8 +734,6 @@ namespace igx::ui {
 				//TODO: integrade layouts
 				//TODO: labels for members
 
-				nk_layout_row_static(ctx, 30, 150, 1);
-
 				w.render(data);
 			}
 
@@ -592,6 +746,8 @@ namespace igx::ui {
 			ws.erase(ws.begin() + *rit);
 
 	}
+
+	//Nuklear input loop
 
 	bool GUI::prepareDrawData() {
 
