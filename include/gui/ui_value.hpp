@@ -242,9 +242,9 @@ namespace igx::ui {
 
 	//Boolean container
 
-	template<typename T, void (T::*x)()>
+	template<typename T, void (T::*x)() const>
 	struct Button { 
-		static inline void call(T *v) {
+		static inline void call(const T *v) {
 			(v->*x)();
 		}
 	};

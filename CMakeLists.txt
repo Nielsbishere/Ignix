@@ -73,7 +73,7 @@ target_include_directories(igx PUBLIC include)
 target_include_directories(igx PRIVATE third_party)
 target_include_directories(igx PUBLIC ignis/include)
 target_include_directories(igx PUBLIC ignis/core2/include)
-	target_link_libraries(igx PRIVATE igxi)
+target_link_libraries(igx PRIVATE igxi)
 target_link_libraries(igx PUBLIC ignis ocore)
 
 if(enableNuklearBuild)
@@ -116,7 +116,7 @@ add_virtual_files(
 #
 
 if(enableIgxTest)
-
+	
 	add_executable(igx_test ${testsCpp})
 	target_link_libraries(igx_test PUBLIC igx)
 

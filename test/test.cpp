@@ -510,7 +510,7 @@ struct TestViewportInterface : public ViewportInterface {
 
 			} else if (dvc->isType(InputDevice::MOUSE)) {
 
-				f64 delta = dvc->getCurrentAxis(MouseAxis::Axis_wheel);
+				f64 delta = dvc->getCurrentAxis(MouseAxis::Axis_wheel_y);
 
 				if(delta)
 					speed = oic::Math::clamp(speed * 1 + (delta / 1024), 0.5, 5.0);

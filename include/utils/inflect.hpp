@@ -111,22 +111,13 @@ namespace igx::ui {
 //Either reflection or inspection; inflection
 
 #define Inflect(...)																				\
-																									\
-template<usz i, typename T, typename T2, typename T3, typename ...args>								\
-void _inflect(T &inflector, T2 *parent, const List<String> &names, T3 &t, args &...arg) {			\
-																									\
-																									\
-	if constexpr (sizeof...(args) == 0)																\
-		inflector.inflect(names[i], t, parent);														\
-																									\
-	else {																							\
-		inflector.inflect(names[i], t, parent);														\
-		_inflect<i + 1>(inflector, parent, names, arg...);											\
-	}																								\
-}																									\
-																									\
 template<typename T, typename T2>																	\
-void inflect(T &inflector, T2*) {																	\
+void inflect(T &inflector, const T2*) {																\
 	static const List<String> namesOfArgs = igx::ui::ArgHelper::makeNames(#__VA_ARGS__);			\
-	_inflect<0>(inflector, this, namesOfArgs, __VA_ARGS__);											\
+	inflector.inflect(this, namesOfArgs, __VA_ARGS__);												\
+}																									\
+template<typename T, typename T2>																	\
+void inflect(T &inflector, const T2*) const {														\
+	static const List<String> namesOfArgs = igx::ui::ArgHelper::makeNames(#__VA_ARGS__);			\
+	inflector.inflect(this, namesOfArgs, __VA_ARGS__);												\
 }

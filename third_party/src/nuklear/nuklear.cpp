@@ -384,8 +384,8 @@ namespace igx::ui {
 				FlushBuffer(data->ibo, uploadBuffer)
 			);
 
-		const nk_draw_command *cmd {};
-		nk_draw_index offset {};
+		const nk_draw_command *cmd{};
+		nk_draw_index offset{};
 
 		nk_draw_foreach(cmd, data->ctx, &data->drawCommands) {
 
@@ -445,8 +445,13 @@ namespace igx::ui {
 
 				usz axis = ih - MouseButton::count;
 
-				if (axis == MouseAxis::Axis_wheel) {
-					nk_input_scroll(data->ctx, nk_vec2(f32(dvc->getCurrentAxis(MouseAxis::Axis_wheel)), 0));
+				if (axis == MouseAxis::Axis_wheel_x) {
+					nk_input_scroll(data->ctx, nk_vec2(f32(dvc->getCurrentAxis(MouseAxis::Axis_wheel_x)), 0));
+					return true;
+				}
+
+				else if (axis == MouseAxis::Axis_wheel_y) {
+					nk_input_scroll(data->ctx, nk_vec2(0, f32(dvc->getCurrentAxis(MouseAxis::Axis_wheel_y))));
 					return true;
 				}
 
@@ -464,24 +469,115 @@ namespace igx::ui {
 	//Nuklear renderer
 
 	bool StructRenderer::doButton(const String &name) {
-		nk_layout_row_dynamic(data->ctx, 30, 1);
+		nk_layout_row_dynamic(data->ctx, 15, 1);
 		return nk_button_label(data->ctx, name.data());
 	}
 
 	void StructRenderer::doCheckbox(const String &name, bool &checkbox){
 
-		nk_layout_row_dynamic(data->ctx, 30, 2);
+		nk_layout_row_dynamic(data->ctx, 15, 2);
 
 		int active = checkbox;
 		nk_checkbox_label(data->ctx, name.c_str(), &active);
 		checkbox = active;
 	}
 
-	void StructRenderer::doStruct(const String &) {
-		nk_layout_row_dynamic(data->ctx, 30, 2);
+	bool StructRenderer::startStruct(const String &name) {
+		return nk_tree_push_id(data->ctx, NK_TREE_TAB, name.c_str(), NK_MAXIMIZED, 0);
 	}
 
-	void StructRenderer::doInt(const String &name, isz byteSize, usz required, void *loc) {
+	void StructRenderer::endStruct() {
+		nk_tree_pop(data->ctx);
+	}
+
+	void StructRenderer::doString(const String &name, String &str, bool isConst) {
+
+		if (name.size()) {
+			nk_layout_row_dynamic(data->ctx, 15, 2);
+			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+		}
+
+		if (isConst)
+			nk_label(data->ctx, str.c_str(), NK_TEXT_LEFT);
+		else {
+			
+			auto &temporaryData = map->operator[](&str);
+			temporaryData.isStillPresent = true;
+
+			//Setup data and filter out invalid data
+
+			auto &len = *(int*)temporaryData.data;
+
+			usz maxSize = str.capacity() + 9;
+
+			if (
+				len != str.size() ||
+				temporaryData.heapData.size() < maxSize || 
+				std::memcmp(temporaryData.heapData.data(), str.data(), str.size())
+			) {
+
+				temporaryData.heapData.resize(maxSize);
+				std::memcpy(temporaryData.heapData.data(), str.data(), str.size());
+
+				temporaryData.heapData[str.size()] = 0;
+
+				len = (int) str.size();
+			}
+
+			nk_edit_string(
+				data->ctx, NK_EDIT_FIELD, 
+				(char*)temporaryData.heapData.data(), 
+				&len, (int)str.capacity() + 8, 
+				nk_filter_default
+			);
+		}
+	}
+
+	void StructRenderer::doString(const String &name, c8 *str, bool isConst, usz maxSize) {
+
+		if (name.size()) {
+			nk_layout_row_dynamic(data->ctx, 15, 2);
+			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+		}
+
+		int len = (int) std::min(strlen(str), maxSize);
+
+		if (isConst)
+			nk_label(data->ctx, String(str, str + len).c_str(), NK_TEXT_LEFT);
+		else 
+			nk_edit_string(
+				data->ctx, NK_EDIT_FIELD, 
+				(char*)str, 
+				&len, (int)maxSize, 
+				nk_filter_default
+			);
+	}
+
+	void StructRenderer::doInt(const String &name, isz byteSize, usz required, const void *loc, bool isConst) {
+
+		if (isConst) {
+
+			if (name.size()) {
+				nk_layout_row_dynamic(data->ctx, 15, 2);
+				nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+			}
+
+			std::stringstream ss;
+
+			switch (byteSize) {
+				case 1: ss << (u16)*(u8*)loc;		break;
+				case -1: ss << (i16)*(i8*)loc;		break;
+				case 2: ss << *(u16*)loc;			break;
+				case -2: ss << *(i16*)loc;			break;
+				case 4: ss << *(u32*)loc;			break;
+				case -4: ss << *(i32*)loc;			break;
+				case 8: ss << *(u64*)loc;			break;
+				case -8: ss << *(i64*)loc;
+			}
+
+			nk_label(data->ctx, ss.str().c_str(), NK_TEXT_LEFT);
+			return;
+		}
 
 		auto &temporaryData = map->operator[](loc);
 		temporaryData.isStillPresent = true;
@@ -543,9 +639,10 @@ namespace igx::ui {
 
 		//Edit string
 
-		nk_layout_row_dynamic(data->ctx, 30, 2);
-
-		nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+		if (name.size()) {
+			nk_layout_row_dynamic(data->ctx, 15, 2);
+			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+		}
 
 		nk_edit_string(
 			data->ctx, NK_EDIT_FIELD, 
@@ -583,11 +680,11 @@ namespace igx::ui {
 
 	}
 
-	void *StructRenderer::beginList(const String &name, usz count, void *loc) {
+	void *StructRenderer::beginList(const String &name, usz count, const void *loc) {
 
 		//TODO: Scrollbar
 
-		nk_layout_row_dynamic(data->ctx, 400, 1);
+		nk_layout_row_dynamic(data->ctx, float(15 * (count + 2)), 1);
 
 		//Get nk_list_view from temporary data
 
@@ -601,8 +698,8 @@ namespace igx::ui {
 
 		//(No need to clear since nk_list_view_begin sets it
 
-		if (nk_list_view_begin(data->ctx, (nk_list_view*)v, name.c_str(), NK_WINDOW_BORDER, 25, (int)count)) {
-			nk_layout_row_dynamic(data->ctx, 30, 2);
+		if (nk_list_view_begin(data->ctx, (nk_list_view*)v, name.c_str(), NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR, 15, (int)count)) {
+			nk_layout_row_dynamic(data->ctx, 15, 2);
 			return v;
 		}
 
@@ -626,16 +723,16 @@ namespace igx::ui {
 
 		//TODO: Opening two after each other seems to infinite loop?
 
-		nk_layout_row_dynamic(data->ctx, 30, 1);
+		nk_layout_row_dynamic(data->ctx, 15, 1);
 
-		nk_combobox(ctx, names.data(), int(names.size()), &selected, 30, nk_vec2(150, 200));
+		nk_combobox(ctx, names.data(), int(names.size()), &selected, 15, nk_vec2(150, 200));
 
 		index = usz(selected);
 	}
 
 	void StructRenderer::doRadioButtons(const String&, usz &index, const List<const c8*> &names) {
 		
-		nk_layout_row_static(data->ctx, 30, 75, 2);
+		nk_layout_row_static(data->ctx, 15, 75, 2);
 
 		for (usz i = 0; i < names.size(); ++i)
 			if (nk_option_label(data->ctx, names[i], index == i))
@@ -643,13 +740,13 @@ namespace igx::ui {
 
 	}
 
-	usz StructRenderer::doFileSystem(oic::FileSystem *&fs, oic::FileHandle handle, const String &path, u32 &selected) {
+	usz StructRenderer::doFileSystem(const oic::FileSystem *fs, oic::FileHandle handle, const String &path, u32 &selected) {
 
 		oicAssert("Local file system is not supported yet", path.empty());
 
 		FileInfo info = fs->getVirtualFiles()[handle];
 
-		if (nk_tree_element_push_id(data->ctx, info.isFolder() ? NK_TREE_NODE : NK_TREE_CHILD, info.path.c_str(), NK_MINIMIZED, (int*)&selected, (int)handle)) {
+		if (nk_tree_element_push_id(data->ctx, info.isFolder() ? NK_TREE_NODE : NK_TREE_CHILD, info.name.c_str(), NK_MINIMIZED, (int*)&selected, (int)handle)) {
 
 			if (info.isFolder())
 				for (FileHandle i = info.folderHint; i != info.fileEnd; ++i)
@@ -661,25 +758,26 @@ namespace igx::ui {
 		return handle;
 	}
 
-	void StructRenderer::doFileSystem(const String &name, oic::FileSystem *&fs) {
+	void StructRenderer::doFileSystem(const String &name, const oic::FileSystem *fs) {
 
-		fs->lock();
+		if (nk_tree_push_id(data->ctx, NK_TREE_TAB, name.c_str(), NK_MAXIMIZED, 0)) {
 
-		if (nk_tree_push_id(data->ctx, NK_TREE_TAB, name.c_str(), NK_MINIMIZED, 0)) {
+			if (fs) {
 
-			//Reserve temporary data
+				//Reserve temporary data
 
-			auto &temporaryData = map->operator[](&fs);
-			temporaryData.isStillPresent = true;
+				auto &temporaryData = map->operator[](&fs);
+				temporaryData.isStillPresent = true;
 
-			//Go through virtual path
+				//Go through virtual path
 
-			doFileSystem(fs, 0, "", *(u32*)temporaryData.data);
+				doFileSystem(fs, 0, "", *(u32 *)temporaryData.data);
+
+			}
 
 			nk_tree_pop(data->ctx);
 		}
 
-		fs->unlock();
 	}
 
 	//Rendering windows
