@@ -197,6 +197,56 @@ namespace igx::ui {
 
 	};
 
+	//Value with representation
+
+	enum class NumberFormat {
+		DEC,
+		HEX,
+		OCT,
+		BIN
+	};
+
+	template<typename T, NumberFormat numberFormat>
+	struct Val : ValueContainer<T> {
+		using ValueContainer<T>::ValueContainer;
+	};
+
+	template<typename T>
+	using Valh = Val<T, NumberFormat::HEX>;
+
+	template<typename T>
+	using Valb = Val<T, NumberFormat::BIN>;
+
+	template<typename T>
+	using Valo = Val<T, NumberFormat::OCT>;
+
+	using u8h = Valh<u8>;
+	using u16h = Valh<u16>;
+	using u32h = Valh<u32>;
+	using u64h = Valh<u64>;
+	using i8h = Valh<i8>;
+	using i16h = Valh<i16>;
+	using i32h = Valh<i32>;
+	using i64h = Valh<i64>;
+
+	using u8o = Valo<u8>;
+	using u16o = Valo<u16>;
+	using u32o = Valo<u32>;
+	using u64o = Valo<u64>;
+	using i8o = Valo<i8>;
+	using i16o = Valo<i16>;
+	using i32o = Valo<i32>;
+	using i64o = Valo<i64>;
+
+	using u8b = Valb<u8>;
+	using u16b = Valb<u16>;
+	using u32b = Valb<u32>;
+	using u64b = Valb<u64>;
+	using i8b = Valb<i8>;
+	using i16b = Valb<i16>;
+	using i32b = Valb<i32>;
+	using i64b = Valb<i64>;
+
 	//Dropdowns and radio buttons (require oicExposedEnum)
 
 	template<typename T, bool isRadioButton>

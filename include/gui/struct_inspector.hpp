@@ -30,7 +30,7 @@ namespace igx::ui {
 
 		//Recursive structs
 
-		template<typename T, typename T2, typename = std::enable_if_t<std::is_class_v<T>>>
+		template<typename T, typename T2, typename = std::enable_if_t<std::is_class_v<T> || std::is_union_v<T>>>
 		inline void inflect(const String &name, T &t, const T2 *parent) {
 			if (startStruct(name)) {
 				t.inflect(*this, parent);
@@ -38,7 +38,7 @@ namespace igx::ui {
 			}
 		}
 
-		template<typename T, typename T2, typename = std::enable_if_t<std::is_class_v<T>>>
+		template<typename T, typename T2, typename = std::enable_if_t<std::is_class_v<T> || std::is_union_v<T>>>
 		inline void inflect(const String &name, const T &t, const T2 *parent) {
 			if (startStruct(name)) {
 				t.inflect(*this, parent);
@@ -101,6 +101,16 @@ namespace igx::ui {
 		template<typename T> inline void inflect(const String &name, const u64 &i, const T*) { doInt(name, (u64&) i, true); }
 		template<typename T> inline void inflect(const String &name, const i64 &i, const T*) { doInt(name, (i64&) i, true); }
 
+		//Numbers formatted differently
+
+		template<typename T, typename T2, NumberFormat Format> 
+		inline void inflect(const String &name, Val<T, Format> &format, const T2*) { doInt<Format>(name, format.value, true); }
+
+		template<typename T, typename T2, NumberFormat Format> 
+		inline void inflect(const String &name, const Val<T, Format> &format, const T2*) { doInt<Format>(name, (T&)format.value, true); }
+
+		//Strings
+
 		template<typename T> inline void inflect(const String &name, String &str, const T*) { doString(name, str, false); }
 		template<typename T> inline void inflect(const String &name, const String &str, const T*) { doString(name, (String&) str, true); }
 
@@ -109,6 +119,15 @@ namespace igx::ui {
 
 		template<typename T, usz siz> inline void inflect(const String &name, c8 (&str)[siz], const T*) { doString(name, (c8*)str, false, siz); }
 		template<typename T, usz siz> inline void inflect(const String &name, const c8 (&str)[siz], const T*) { doString(name, (c8*)str, true, siz); }
+
+		template<typename T> inline void inflect(const String &name, WString &str, const T*) { doString(name, str, false); }
+		template<typename T> inline void inflect(const String &name, const WString &str, const T*) { doString(name, (WString&) str, true); }
+
+		template<typename T> inline void inflect(const String &name, c16 *&str, const T*) { doString(name, (c16*)str, false, wcslen(str)); }
+		template<typename T> inline void inflect(const String &name, const c16 *&str, const T*) { doString(name, (c16*)str, true, wcslen(str)); }
+
+		template<typename T, usz siz> inline void inflect(const String &name, c16 (&str)[siz], const T*) { doString(name, (c16*)str, false, siz); }
+		template<typename T, usz siz> inline void inflect(const String &name, const c16 (&str)[siz], const T*) { doString(name, (c16*)str, true, siz); }
 
 		//Structs
 
@@ -143,8 +162,11 @@ namespace igx::ui {
 		void doString(const String&, String &str, bool isConst);
 		void doString(const String&, c8 *str, bool isConst, usz maxSize = usz_MAX);
 
+		void doString(const String&, WString &str, bool isConst);
+		void doString(const String&, c16 *str, bool isConst, usz maxSize = usz_MAX);
+
 		bool doButton(const String&);
-		usz doFileSystem(const oic::FileSystem *fs, const oic::FileHandle handle, const String &path, u32&);
+		usz doFileSystem(const oic::FileSystem *fs, const oic::FileHandle handle, const String &path, u32&, bool maximized = false);
 		void doFileSystem(const String&, const oic::FileSystem *fs);
 
 		void doDropdown(const String&, usz &index, const List<const c8*> &names);
@@ -153,31 +175,50 @@ namespace igx::ui {
 		void *beginList(const String &name, usz count, const void *loc);
 		void endList(void *ptr);
 
-		void doInt(const String&, isz size, usz requiredBufferSize, const void *loc, bool isConst);
+		void doInt(const String&, isz size, usz requiredBufferSize, const void *loc, bool isConst, NumberFormat numberFormat);
 
-		template<typename T>
+		template<NumberFormat numberFormat = NumberFormat::DEC, typename T>
 		inline void doInt(const String &name, T &i, bool isConst = false) {
 
 			static constexpr isz size = std::is_signed_v<T> ? -isz(sizeof(i)) : isz(sizeof(i));
 
+			usz required;
+
+			//Binary formats
+
+			if constexpr (numberFormat == NumberFormat::HEX)		//2 characters per byte
+				required = sizeof(i) * 2;
+
+			else if constexpr (numberFormat == NumberFormat::BIN)	//8 characters per byte
+				required = sizeof(i) * 8;
+
+			else if constexpr (numberFormat == NumberFormat::OCT)	//1 character per 3 bits
+				required = usz(std::ceil(sizeof(i) * 8 / 3.f));
+
+			//Decimal
+
 			//18'446'744'073'709'551'615 or -9'223'372'036'854'775'808
 
-			if constexpr(sizeof(T) == 8)
-				doInt(name, size, 20, &i, isConst);	
+			else if constexpr (sizeof(T) == 8)
+				required = 20;
 
 			//These all fit the scheme of unsigned_bits + use_sign
 
 			else {
 
-				static constexpr usz required[] = {
+				static constexpr usz bySize[] = {
 					3,		//255 or 128
 					5,		//65'535 or 32'768
 					0,
 					10		//4'294'967'295 or 2'147'483'648
 				};
 
-				doInt(name, size, required[sizeof(i) - 1] + std::is_signed_v<T>, &i, isConst);
+				required = bySize[sizeof(i) - 1] + std::is_signed_v<T>;
 			}
+
+			//Do an int
+
+			doInt(name, size, required, &i, isConst, numberFormat);
 		}
 
 		//template<typename T, T min, T max, T step>

@@ -483,17 +483,50 @@ namespace igx::ui {
 	}
 
 	bool StructRenderer::startStruct(const String &name) {
-		return nk_tree_push_id(data->ctx, NK_TREE_TAB, name.c_str(), NK_MAXIMIZED, 0);
+		return nk_tree_push_id(data->ctx, NK_TREE_TAB, name.c_str(), NK_MAXIMIZED, 0);		//TODO: Minimizing this doesn't work?
 	}
 
 	void StructRenderer::endStruct() {
 		nk_tree_pop(data->ctx);
 	}
 
+	void StructRenderer::doString(const String &name, WString &str, bool isConst) {
+
+		String intermediate = fromUTF16(str);
+
+		if(isConst)
+			doString(name, intermediate, true);
+		else {
+			doString(name, intermediate, false);
+			str = fromUTF8(intermediate);
+		}
+	}
+
+	void StructRenderer::doString(const String &name, c16 *str, bool isConst, usz maxSize) {
+
+		usz len = std::min(std::char_traits<c16>::length(str), maxSize);
+
+		String intermediate = fromUTF16(WString(str, str + len));
+
+		if(isConst)
+			doString(name, intermediate, true);
+		else {
+
+			//Since utf16 is involved, only copy the final result if the buffer can fit it
+
+			doString(name, intermediate, false);
+
+			WString result = fromUTF8(intermediate);
+
+			if (result.size() <= maxSize)
+				std::memcpy(str, result.c_str(), result.size() * sizeof(c16));
+		}
+	}
+
 	void StructRenderer::doString(const String &name, String &str, bool isConst) {
 
 		if (name.size()) {
-			nk_layout_row_dynamic(data->ctx, 15, 2);
+			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 30.f, 2);
 			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
 		}
 
@@ -536,7 +569,7 @@ namespace igx::ui {
 	void StructRenderer::doString(const String &name, c8 *str, bool isConst, usz maxSize) {
 
 		if (name.size()) {
-			nk_layout_row_dynamic(data->ctx, 15, 2);
+			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 30.f, 2);
 			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
 		}
 
@@ -553,29 +586,144 @@ namespace igx::ui {
 			);
 	}
 
-	void StructRenderer::doInt(const String &name, isz byteSize, usz required, const void *loc, bool isConst) {
+	inline String stringify(const u8 *loc, isz byteSize, NumberFormat numberFormat) {
+		
+		std::stringstream ss;
+
+		static constexpr c8 mapping[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+
+		switch(numberFormat){
+
+			case NumberFormat::HEX:
+
+				ss << '#';
+
+				for (usz i = usz(std::abs(byteSize)) - 1; i != usz_MAX; --i) {
+					u8 val = loc[i];
+					ss << mapping[val >> 4] << mapping[val & 0xF];
+				}
+
+				break;
+
+			case NumberFormat::BIN:
+
+				ss << "0b";
+
+				for (usz i = (usz(std::abs(byteSize)) >> 3) - 1; i != usz_MAX; --i)
+					ss << u32(bool(loc[i >> 3] & (1 << (i & 7))));
+
+				break;
+
+			case NumberFormat::OCT:
+				oic::System::log()->fatal("Octal stringify not supported yet");		//TODO: Octal
+
+			default:
+				switch (byteSize) {
+					case 1: ss << (u16)*(u8*)loc;		break;
+					case -1: ss << (i16)*(i8*)loc;		break;
+					case 2: ss << *(u16*)loc;			break;
+					case -2: ss << *(i16*)loc;			break;
+					case 4: ss << *(u32*)loc;			break;
+					case -4: ss << *(i32*)loc;			break;
+					case 8: ss << *(u64*)loc;			break;
+					case -8: ss << *(i64*)loc;
+				}
+		}
+
+		return ss.str();
+	}
+
+	inline bool integerify(i64 &out, const String &str, NumberFormat numberFormat, bool allowNeg) {
+
+		if (str.empty())
+			return false;
+
+		i64 sign = 1;
+		u64 res{};
+		usz j = str.size(), end = usz_MAX;
+
+		if (numberFormat == NumberFormat::HEX && str[0] == '#') {
+
+			end = 0;
+
+			if (j == 1)
+				return false;
+		}
+
+		if (numberFormat == NumberFormat::BIN && str.size() >= 2 && str[0] == '0' && str[1] == 'b') {
+
+			end = 1;
+
+			if (j == 2)
+				return false;
+		}
+
+		if (numberFormat == NumberFormat::DEC && str[0] == '-') {
+
+			if (!allowNeg)
+				return false;
+
+			sign *= -1;
+			end = 0;
+
+			if (j == 1)
+				return false;
+		}
+
+		i64 mul = 1;
+
+		static constexpr u64 exps[] = { 10, 16, 8, 2 };
+
+		u64 ex = exps[usz(numberFormat)];
+
+		for (usz i = j - 1; i != end; --i) {
+
+			switch (str[i]) {
+
+				case 'F': case 'E': case 'D': case 'C': case 'B': case 'A':
+
+					if (numberFormat != NumberFormat::HEX)
+						return false;
+
+					res += mul * (str[i] - ('A' - 10));
+					mul *= 16;
+					break;
+
+				case '9': case '8':
+
+					if (numberFormat == NumberFormat::OCT)
+						return false;
+
+				case '7': case '6': case '5': case '4': case '3': case '2':
+
+					if (numberFormat == NumberFormat::BIN)
+						return false;
+
+				case '1': case '0':
+
+					res += mul * (str[i] - '0');
+					mul *= ex;
+					break;
+
+				default:
+					return false;
+			}
+		}
+
+		out = i64(res) * sign;
+		return true;
+	}
+
+	void StructRenderer::doInt(const String &name, isz byteSize, usz required, const void *loc, bool isConst, NumberFormat numberFormat) {
 
 		if (isConst) {
 
 			if (name.size()) {
-				nk_layout_row_dynamic(data->ctx, 15, 2);
+				nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 30.f, 2);
 				nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
 			}
 
-			std::stringstream ss;
-
-			switch (byteSize) {
-				case 1: ss << (u16)*(u8*)loc;		break;
-				case -1: ss << (i16)*(i8*)loc;		break;
-				case 2: ss << *(u16*)loc;			break;
-				case -2: ss << *(i16*)loc;			break;
-				case 4: ss << *(u32*)loc;			break;
-				case -4: ss << *(i32*)loc;			break;
-				case 8: ss << *(u64*)loc;			break;
-				case -8: ss << *(i64*)loc;
-			}
-
-			nk_label(data->ctx, ss.str().c_str(), NK_TEXT_LEFT);
+			nk_label(data->ctx, stringify((const u8*)loc, byteSize, numberFormat).c_str(), NK_TEXT_LEFT);
 			return;
 		}
 
@@ -599,20 +747,7 @@ namespace igx::ui {
 
 			//Init string
 
-			std::stringstream ss;
-
-			switch (byteSize) {
-				case 1: ss << (u16)*(u8*)loc;		break;
-				case -1: ss << (i16)*(i8*)loc;		break;
-				case 2: ss << *(u16*)loc;			break;
-				case -2: ss << *(i16*)loc;			break;
-				case 4: ss << *(u32*)loc;			break;
-				case -4: ss << *(i32*)loc;			break;
-				case 8: ss << *(u64*)loc;			break;
-				case -8: ss << *(i64*)loc;
-			}
-
-			String str = ss.str();
+			String str = stringify((const u8*)loc, byteSize, numberFormat);
 
 			oicAssert("Unexpected int string out of bounds", str.size() <= required);
 
@@ -633,51 +768,60 @@ namespace igx::ui {
 		if (len < 0 || len > required)
 			len = 0;
 
-		//TODO: nkFilter = nk_filter_hex
 		//TODO: Ignore - if unsigned, otherwise only allow at front
 		//TODO: Callbacks for runes, so input can be used
 
 		//Edit string
 
 		if (name.size()) {
-			nk_layout_row_dynamic(data->ctx, 15, 2);
+			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 30.f, 2);
 			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
 		}
 
+		static constexpr nk_plugin_filter filters[] = {
+			nk_filter_decimal,
+			nk_filter_hex,
+			nk_filter_oct,
+			nk_filter_binary
+		};
+
+		c8 *start = (c8*)(temporaryData.heapData.data() + ubyteSize);
+		String prev = String(start, start + len);
+
+		//TODO: With hex values this doesn't work?
+
 		nk_edit_string(
 			data->ctx, NK_EDIT_FIELD, 
-			(char*)(temporaryData.heapData.data() + ubyteSize), 
+			start, 
 			&len, (int)required + 1, 
-			nk_filter_decimal
+			filters[usz(numberFormat)]
 		);
 
 		//Output
 
-		const c8 *start = (const c8*)(temporaryData.heapData.data() + ubyteSize);
+		String newStr = String(start, start + len);
 
-		std::stringstream ss(String(start, start + len));
+		if (newStr == prev)
+			return;
+
+		i64 val;
+		
+		if (!integerify(val, newStr, numberFormat, byteSize < 0))
+			return;
+
+		std::stringstream ss(newStr);
 		
 		switch (byteSize) {
 
-			case 2: ss >> *(u16*)loc;			break;
-			case -2: ss >> *(i16*)loc;			break;
-			case 4: ss >> *(u32*)loc;			break;
-			case -4: ss >> *(i32*)loc;			break;
-			case 8: ss >> *(u64*)loc;			break;
-			case -8: ss >> *(i64*)loc;			break;
-
-			case 1: {
-				u16 temp;
-				if (ss >> temp) *(u8*)loc = u8(temp);
-				break;
-			}
-
-			case -1: {
-				i16 temp;
-				if (ss >> temp) *(i8*)loc = i8(temp);
-			}
+			case 1: *(u8*)loc = u8(val);		break;
+			case -1: *(i8*)loc = i8(val);		break;
+			case 2: *(u16*)loc = u16(val);		break;
+			case -2: *(i16*)loc = i16(val);		break;
+			case 4: *(u32*)loc = u32(val);		break;
+			case -4: *(i32*)loc = i32(val);		break;
+			case 8: *(u64*)loc = u64(val);		break;
+			case -8: *(i64*)loc = val;
 		}
-
 	}
 
 	void *StructRenderer::beginList(const String &name, usz count, const void *loc) {
@@ -740,13 +884,19 @@ namespace igx::ui {
 
 	}
 
-	usz StructRenderer::doFileSystem(const oic::FileSystem *fs, oic::FileHandle handle, const String &path, u32 &selected) {
+	usz StructRenderer::doFileSystem(const oic::FileSystem *fs, oic::FileHandle handle, const String &path, u32 &selected, bool maximized) {
 
 		oicAssert("Local file system is not supported yet", path.empty());
 
 		FileInfo info = fs->getVirtualFiles()[handle];
 
-		if (nk_tree_element_push_id(data->ctx, info.isFolder() ? NK_TREE_NODE : NK_TREE_CHILD, info.name.c_str(), NK_MINIMIZED, (int*)&selected, (int)handle)) {
+		if (nk_tree_element_push_id(
+			data->ctx, 
+			info.isFolder() ? NK_TREE_NODE : NK_TREE_CHILD, 
+			info.name.c_str(),
+			maximized ? NK_MAXIMIZED : NK_MINIMIZED, 
+			(int*)&selected, (int)handle
+		)) {
 
 			if (info.isFolder())
 				for (FileHandle i = info.folderHint; i != info.fileEnd; ++i)
@@ -771,7 +921,7 @@ namespace igx::ui {
 
 				//Go through virtual path
 
-				doFileSystem(fs, 0, "", *(u32 *)temporaryData.data);
+				doFileSystem(fs, 0, "", *(u32*)temporaryData.data, true);
 
 			}
 
