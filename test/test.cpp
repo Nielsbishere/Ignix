@@ -60,25 +60,44 @@ struct TestViewportInterface : public ViewportInterface {
 	
 	struct TestStruct0 {
 
-		inline void click() {
+		inline void click() const {
 			oic::System::log()->debug("Play");
 		}
 
-		Button<TestStruct0, &click> Play;
-		RadioButtons<Difficulty> Difficulty;
-		bool Silver, Bronze, Gold = true;
-		Dropdown<BiomeType> Biome_type = BiomeType::Small_biome;
+		RadioButtons<Difficulty> difficulty;
+		bool silver, bronze, gold = true;
+		Dropdown<BiomeType> biomeType = BiomeType::Small_biome;
 
 		//MinMaxSliderBase<f32, 0, 1> Volume = .5f;
 		//MinMaxProgress<f32, 0, 100, 0.1> Progress;
 
-		Inflect(
-			Play, 
-			Difficulty, 
-			Silver, Bronze, Gold,
-			Biome_type
-			/*, Volume, Progress*/
-		);
+		template<typename T, typename T2>														
+		void inflect(T &inflector, const T2*) {
+			inflector.inflect(
+				this, 
+				{ "Play", "Silver", "Bronze", "Gold", "Biome type" }, 
+				Button<TestStruct0, &TestStruct0::click>{}, 
+				difficulty,
+				silver,
+				bronze,
+				gold,
+				biomeType
+			);
+		}		
+
+		template<typename T, typename T2>													
+		void inflect(T &inflector, const T2*) const {
+			inflector.inflect(
+				this, 
+				{ "Play", "Silver", "Bronze", "Gold", "Biome type" }, 
+				Button<TestStruct0, &TestStruct0::click>{}, 
+				difficulty,
+				silver,
+				bronze,
+				gold,
+				biomeType
+			);							
+		}
 	};
 
 	struct TestStruct1 {
@@ -93,6 +112,11 @@ struct TestViewportInterface : public ViewportInterface {
 		oic::FileSystem *Files = oic::System::files();
 
 		List<TestStruct0> Games{ {}, {} };
+
+		HashMap<String, u32> Testing {
+			{ "Testing", 123 },
+			{ "Something else", 000 }
+		};
 
 		u8 Test = 11;
 		u8 Test_u8 = u8_MAX;
@@ -111,7 +135,7 @@ struct TestViewportInterface : public ViewportInterface {
 			Test, Test_u8, Test_i8, Test_u16, Test_i16,
 			Test_u32, Test_i32, Test_u64, Test_i64,
 			Keyboard_shortcut, Mouse_shortcut,
-			Games
+			Games, Testing
 		);
 	};
 

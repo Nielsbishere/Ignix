@@ -48,8 +48,8 @@ namespace igx::ui {
 
 		//Selectors and buttons
 
-		template<typename T, void (T::*x)()>
-		inline void inflect(const String&, Button<T, x> &button, const T *parent);
+		template<typename T, void (T::*x)() const>
+		inline void inflect(const String&, const Button<T, x> &button, const T *parent);
 
 		template<typename T>
 		inline void inflect(const String &name, bool &checkbox, const T*) {
@@ -294,8 +294,8 @@ namespace igx::ui {
 		}
 	}
 
-	template<typename T, void (T::*x)()>
-	inline void StructRenderer::inflect(const String &name, Button<T, x> &button, const T *parent) {
+	template<typename T, void (T::*x)() const>
+	inline void StructRenderer::inflect(const String &name, const Button<T, x> &button, const T *parent) {
 		if (doButton(name))
 			button.call(parent);
 	}
