@@ -482,12 +482,23 @@ namespace igx::ui {
 		checkbox = active;
 	}
 
-	bool StructRenderer::startStruct(const String &name) {
-		return nk_tree_push_id(data->ctx, NK_TREE_TAB, name.c_str(), NK_MAXIMIZED, 0);		//TODO: Minimizing this doesn't work?
+	//TODO: nk_hash is 32-bit and not 64-bit
+
+	bool StructRenderer::startStruct(const String &name, const void *addr, usz recursion) {
+
+		if (name.empty()) 
+			return true;
+
+		return nk_tree_push_from_hash(
+			data->ctx, NK_TREE_TAB, 
+			name.c_str(), NK_MAXIMIZED, 
+			nk_hash(oic::Hash::collapse32(oic::Hash::hash(usz(addr), recursion)))
+		);
 	}
 
-	void StructRenderer::endStruct() {
-		nk_tree_pop(data->ctx);
+	void StructRenderer::endStruct(const String &name) {
+		if(name.size())
+			nk_tree_pop(data->ctx);
 	}
 
 	void StructRenderer::doString(const String &name, WString &str, bool isConst) {
@@ -908,9 +919,9 @@ namespace igx::ui {
 		return handle;
 	}
 
-	void StructRenderer::doFileSystem(const String &name, const oic::FileSystem *fs) {
+	void StructRenderer::doFileSystem(const String &name, const oic::FileSystem *&fs) {
 
-		if (nk_tree_push_id(data->ctx, NK_TREE_TAB, name.c_str(), NK_MAXIMIZED, 0)) {
+		if (nk_tree_push_from_hash(data->ctx, NK_TREE_TAB, name.c_str(), NK_MAXIMIZED, nk_hash(usz(&fs)))) {
 
 			if (fs) {
 

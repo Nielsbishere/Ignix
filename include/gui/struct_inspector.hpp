@@ -31,133 +31,141 @@ namespace igx::ui {
 		//Recursive structs
 
 		template<typename T, typename T2, typename = std::enable_if_t<std::is_class_v<T> || std::is_union_v<T>>>
-		inline void inflect(const String &name, T &t, const T2 *parent) {
-			if (startStruct(name)) {
-				t.inflect(*this, parent);
-				endStruct();
+		inline void inflect(const String &name, usz recursion, T &t, const T2 *parent) {
+			if (startStruct(name, &t, recursion)) {
+				t.inflect(*this, recursion, parent);
+				endStruct(name);
 			}
 		}
 
 		template<typename T, typename T2, typename = std::enable_if_t<std::is_class_v<T> || std::is_union_v<T>>>
-		inline void inflect(const String &name, const T &t, const T2 *parent) {
-			if (startStruct(name)) {
-				t.inflect(*this, parent);
-				endStruct();
+		inline void inflect(const String &name, usz recursion, const T &t, const T2 *parent) {
+			if (startStruct(name, &t, recursion)) {
+				t.inflect(*this, recursion, parent);
+				endStruct(name);
 			}
 		}
 
 		//Selectors and buttons
 
 		template<typename T, void (T::*x)() const>
-		inline void inflect(const String&, const Button<T, x> &button, const T *parent);
+		inline void inflect(const String&, usz, const Button<T, x> &button, const T *parent);
 
 		template<typename T>
-		inline void inflect(const String &name, bool &checkbox, const T*) {
+		inline void inflect(const String &name, usz, bool &checkbox, const T*) {
 			doCheckbox(name, checkbox);
 		}
 
 		template<typename T, typename T2>
-		inline void inflect(const String&, Dropdown<T> &dropdown, const T2 *parent);
+		inline void inflect(const String&, usz, Dropdown<T> &dropdown, const T2 *parent);
 
 		template<typename T, typename T2>
-		inline void inflect(const String&, RadioButtons<T> &radio, const T2 *parent);
+		inline void inflect(const String&, usz, RadioButtons<T> &radio, const T2 *parent);
 
 		//Containers
 
 		template<typename T>
-		inline void inflect(const String &name, const oic::FileSystem *fs, const T*) {
+		inline void inflect(const String &name, usz, const oic::FileSystem *&fs, const T*) {
 			doFileSystem(name, fs);
 		}
 
+		template<typename T>
+		inline void inflect(const String &name, usz, oic::FileSystem *&fs, const T*) {
+			doFileSystem(name, (const oic::FileSystem*&) fs);
+		}
+
 		template<typename T, typename T2, bool isConst = false>
-		inline void inflect(const String &name, List<T> &li, const T2*);
+		inline void inflect(const String &name, usz, List<T> &li, const T2*);
 
 		template<typename K, typename V, typename T2, bool isConst = false>
-		inline void inflect(const String &name, HashMap<K, V> &li, const T2*);
+		inline void inflect(const String &name, usz, HashMap<K, V> &li, const T2*);
 
 		template<typename T, typename T2>
-		inline void inflect(const String &name, const List<T> &li, const T2*);
+		inline void inflect(const String &name, usz, const List<T> &li, const T2*);
 
 		template<typename K, typename V, typename T2>
-		inline void inflect(const String &name, const HashMap<K, V> &li, const T2*);
+		inline void inflect(const String &name, usz, const HashMap<K, V> &li, const T2*);
 
 		//Base types
 
-		template<typename T> inline void inflect(const String &name, u8 &i, const T*) { doInt(name, i); }
-		template<typename T> inline void inflect(const String &name, i8 &i, const T*) { doInt(name, i); }
-		template<typename T> inline void inflect(const String &name, u16 &i, const T*) { doInt(name, i); }
-		template<typename T> inline void inflect(const String &name, i16 &i, const T*) { doInt(name, i); }
-		template<typename T> inline void inflect(const String &name, u32 &i, const T*) { doInt(name, i); }
-		template<typename T> inline void inflect(const String &name, i32 &i, const T*) { doInt(name, i); }
-		template<typename T> inline void inflect(const String &name, u64 &i, const T*) { doInt(name, i); }
-		template<typename T> inline void inflect(const String &name, i64 &i, const T*) { doInt(name, i); }
+		template<typename T> inline void inflect(const String &name, usz, u8 &i, const T*) { doInt(name, i); }
+		template<typename T> inline void inflect(const String &name, usz, i8 &i, const T*) { doInt(name, i); }
+		template<typename T> inline void inflect(const String &name, usz, u16 &i, const T*) { doInt(name, i); }
+		template<typename T> inline void inflect(const String &name, usz, i16 &i, const T*) { doInt(name, i); }
+		template<typename T> inline void inflect(const String &name, usz, u32 &i, const T*) { doInt(name, i); }
+		template<typename T> inline void inflect(const String &name, usz, i32 &i, const T*) { doInt(name, i); }
+		template<typename T> inline void inflect(const String &name, usz, u64 &i, const T*) { doInt(name, i); }
+		template<typename T> inline void inflect(const String &name, usz, i64 &i, const T*) { doInt(name, i); }
 
-		template<typename T> inline void inflect(const String &name, const u8 &i, const T*) { doInt(name, (u8&) i, true); }
-		template<typename T> inline void inflect(const String &name, const i8 &i, const T*) { doInt(name, (i8&) i, true); }
-		template<typename T> inline void inflect(const String &name, const u16 &i, const T*) { doInt(name, (u16&) i, true); }
-		template<typename T> inline void inflect(const String &name, const i16 &i, const T*) { doInt(name, (i16&) i, true); }
-		template<typename T> inline void inflect(const String &name, const u32 &i, const T*) { doInt(name, (u32&) i, true); }
-		template<typename T> inline void inflect(const String &name, const i32 &i, const T*) { doInt(name, (i32&) i, true); }
-		template<typename T> inline void inflect(const String &name, const u64 &i, const T*) { doInt(name, (u64&) i, true); }
-		template<typename T> inline void inflect(const String &name, const i64 &i, const T*) { doInt(name, (i64&) i, true); }
+		template<typename T> inline void inflect(const String &name, usz, const u8 &i, const T*) { doInt(name, (u8&) i, true); }
+		template<typename T> inline void inflect(const String &name, usz, const i8 &i, const T*) { doInt(name, (i8&) i, true); }
+		template<typename T> inline void inflect(const String &name, usz, const u16 &i, const T*) { doInt(name, (u16&) i, true); }
+		template<typename T> inline void inflect(const String &name, usz, const i16 &i, const T*) { doInt(name, (i16&) i, true); }
+		template<typename T> inline void inflect(const String &name, usz, const u32 &i, const T*) { doInt(name, (u32&) i, true); }
+		template<typename T> inline void inflect(const String &name, usz, const i32 &i, const T*) { doInt(name, (i32&) i, true); }
+		template<typename T> inline void inflect(const String &name, usz, const u64 &i, const T*) { doInt(name, (u64&) i, true); }
+		template<typename T> inline void inflect(const String &name, usz, const i64 &i, const T*) { doInt(name, (i64&) i, true); }
 
 		//Numbers formatted differently
 
 		template<typename T, typename T2, NumberFormat Format> 
-		inline void inflect(const String &name, Val<T, Format> &format, const T2*) { doInt<Format>(name, format.value, true); }
+		inline void inflect(const String &name, usz, Val<T, Format> &format, const T2*) { doInt<Format>(name, format.value, false); }
 
 		template<typename T, typename T2, NumberFormat Format> 
-		inline void inflect(const String &name, const Val<T, Format> &format, const T2*) { doInt<Format>(name, (T&)format.value, true); }
+		inline void inflect(const String &name, usz, const Val<T, Format> &format, const T2*) { doInt<Format>(name, (T&)format.value, true); }
 
 		//Strings
 
-		template<typename T> inline void inflect(const String &name, String &str, const T*) { doString(name, str, false); }
-		template<typename T> inline void inflect(const String &name, const String &str, const T*) { doString(name, (String&) str, true); }
+		template<typename T> inline void inflect(const String &name, usz, String &str, const T*) { doString(name, str, false); }
+		template<typename T> inline void inflect(const String &name, usz, const String &str, const T*) { doString(name, (String&) str, true); }
 
-		template<typename T> inline void inflect(const String &name, c8 *&str, const T*) { doString(name, (c8*)str, false, strlen(str)); }
-		template<typename T> inline void inflect(const String &name, const c8 *&str, const T*) { doString(name, (c8*)str, true, strlen(str)); }
+		template<typename T> inline void inflect(const String &name, usz, c8 *&str, const T*) { doString(name, (c8*)str, false, strlen(str)); }
+		template<typename T> inline void inflect(const String &name, usz, const c8 *&str, const T*) { doString(name, (c8*)str, true, strlen(str)); }
 
-		template<typename T, usz siz> inline void inflect(const String &name, c8 (&str)[siz], const T*) { doString(name, (c8*)str, false, siz); }
-		template<typename T, usz siz> inline void inflect(const String &name, const c8 (&str)[siz], const T*) { doString(name, (c8*)str, true, siz); }
+		template<typename T, usz siz> inline void inflect(const String &name, usz, c8 (&str)[siz], const T*) { doString(name, (c8*)str, false, siz); }
+		template<typename T, usz siz> inline void inflect(const String &name, usz, const c8 (&str)[siz], const T*) { doString(name, (c8*)str, true, siz); }
 
-		template<typename T> inline void inflect(const String &name, WString &str, const T*) { doString(name, str, false); }
-		template<typename T> inline void inflect(const String &name, const WString &str, const T*) { doString(name, (WString&) str, true); }
+		template<typename T> inline void inflect(const String &name, usz, WString &str, const T*) { doString(name, str, false); }
+		template<typename T> inline void inflect(const String &name, usz, const WString &str, const T*) { doString(name, (WString&) str, true); }
 
-		template<typename T> inline void inflect(const String &name, c16 *&str, const T*) { doString(name, (c16*)str, false, wcslen(str)); }
-		template<typename T> inline void inflect(const String &name, const c16 *&str, const T*) { doString(name, (c16*)str, true, wcslen(str)); }
+		template<typename T> inline void inflect(const String &name, usz, c16 *&str, const T*) { doString(name, (c16*)str, false, wcslen(str)); }
+		template<typename T> inline void inflect(const String &name, usz, const c16 *&str, const T*) { doString(name, (c16*)str, true, wcslen(str)); }
 
-		template<typename T, usz siz> inline void inflect(const String &name, c16 (&str)[siz], const T*) { doString(name, (c16*)str, false, siz); }
-		template<typename T, usz siz> inline void inflect(const String &name, const c16 (&str)[siz], const T*) { doString(name, (c16*)str, true, siz); }
+		template<typename T, usz siz> 
+		inline void inflect(const String &name, usz, c16 (&str)[siz], const T*) { doString(name, (c16*)str, false, siz); }
+
+		template<typename T, usz siz> 
+		inline void inflect(const String &name, usz, const c16 (&str)[siz], const T*) { doString(name, (c16*)str, true, siz); }
 
 		//Structs
 
 		template<usz i = 0, typename T, typename T2, typename ...args>
-		_inline_ void inflect(const T *parent, const List<String> &names, T2 &t, args &&...arg) {
+		_inline_ void inflect(const T *parent, usz recursion, const List<String> &names, T2 &t, args &&...arg) {
 
 			if constexpr (sizeof...(args) == 0)
-				inflect(names[i], t, parent);
+				inflect(names[i], recursion + 1, t, parent);
 			else {
-				inflect(names[i], t, parent);	
-				inflect<i + 1>(parent, names, arg...);
+				inflect(names[i], recursion + 1, t, parent);	
+				inflect<i + 1>(parent, recursion, names, arg...);
 			}
 		}
 
 		template<usz i = 0, typename T, typename T2, typename ...args>
-		_inline_ void inflect(const T *parent, const List<String> &names, const T2 &t, args &&...arg) {
+		_inline_ void inflect(const T *parent, usz recursion, const List<String> &names, const T2 &t, args &&...arg) {
 
 			if constexpr (sizeof...(args) == 0)
-				inflect(names[i], t, parent);
+				inflect(names[i], recursion + 1, t, parent);
 			else {
-				inflect(names[i], t, parent);	
-				inflect<i + 1>(parent, names, arg...);
+				inflect(names[i], recursion + 1, t, parent);	
+				inflect<i + 1>(parent, recursion, names, arg...);
 			}
 		}
 
 	private:
 
 		void doCheckbox(const String&, bool &checkbox);
-		bool startStruct(const String&);
-		void endStruct();
+		bool startStruct(const String&, const void *addr, usz recursion);
+		void endStruct(const String&);
 
 		void doString(const String&, String &str, bool isConst);
 		void doString(const String&, c8 *str, bool isConst, usz maxSize = usz_MAX);
@@ -167,7 +175,7 @@ namespace igx::ui {
 
 		bool doButton(const String&);
 		usz doFileSystem(const oic::FileSystem *fs, const oic::FileHandle handle, const String &path, u32&, bool maximized = false);
-		void doFileSystem(const String&, const oic::FileSystem *fs);
+		void doFileSystem(const String&, const oic::FileSystem *&fs);
 
 		void doDropdown(const String&, usz &index, const List<const c8*> &names);
 		void doRadioButtons(const String&, usz &index, const List<const c8*> &names);
@@ -186,14 +194,14 @@ namespace igx::ui {
 
 			//Binary formats
 
-			if constexpr (numberFormat == NumberFormat::HEX)		//2 characters per byte
-				required = sizeof(i) * 2;
+			if constexpr (numberFormat == NumberFormat::HEX)		//2 characters per byte		+ #
+				required = 1 + sizeof(i) * 2;
 
-			else if constexpr (numberFormat == NumberFormat::BIN)	//8 characters per byte
-				required = sizeof(i) * 8;
+			else if constexpr (numberFormat == NumberFormat::BIN)	//8 characters per byte		+ 0b
+				required = 2 + sizeof(i) * 8;
 
-			else if constexpr (numberFormat == NumberFormat::OCT)	//1 character per 3 bits
-				required = usz(std::ceil(sizeof(i) * 8 / 3.f));
+			else if constexpr (numberFormat == NumberFormat::OCT)	//1 character per 3 bits	+ 0
+				required = 1 + usz(std::ceil(sizeof(i) * 8 / 3.f));
 
 			//Decimal
 
@@ -242,7 +250,8 @@ namespace igx::ui {
 				elem.second.isStillPresent = false;
 
 			auto inflector = StructRenderer{ data, &tempData };
-			value.inflect(inflector, (void*)nullptr);
+
+			inflector.inflect("", 0, value, (void*)nullptr);
 
 			List<const void*> toDelete;
 			toDelete.reserve(tempData.size());
@@ -257,12 +266,12 @@ namespace igx::ui {
 	};
 
 	template<typename T, typename T2>
-	inline void StructRenderer::inflect(const String &name, const List<T> &li, const T2 *parent) {
+	inline void StructRenderer::inflect(const String &name, usz, const List<T> &li, const T2 *parent) {
 		inflect<true>(name, (List<T>&) li, parent);
 	}
 
 	template<typename K, typename V, typename T2>
-	inline void StructRenderer::inflect(const String &name, const HashMap<K, V> &li, const T2*) {
+	inline void StructRenderer::inflect(const String &name, usz, const HashMap<K, V> &li, const T2*) {
 
 		usz j = li.size();
 
@@ -284,7 +293,7 @@ namespace igx::ui {
 	}
 
 	template<typename T, typename T2, bool isConst>
-	inline void StructRenderer::inflect(const String &name, List<T> &li, const T2*) {
+	inline void StructRenderer::inflect(const String &name, usz, List<T> &li, const T2*) {
 
 		usz j = li.size();
 
@@ -308,7 +317,7 @@ namespace igx::ui {
 	}
 
 	template<typename K, typename V, typename T2, bool isConst>
-	inline void StructRenderer::inflect(const String &name, HashMap<K, V> &li, const T2*) {
+	inline void StructRenderer::inflect(const String &name, usz, HashMap<K, V> &li, const T2*) {
 
 		usz j = li.size();
 
@@ -336,20 +345,20 @@ namespace igx::ui {
 	}
 
 	template<typename T, void (T::*x)() const>
-	inline void StructRenderer::inflect(const String &name, const Button<T, x> &button, const T *parent) {
+	inline void StructRenderer::inflect(const String &name, usz, const Button<T, x> &button, const T *parent) {
 		if (doButton(name))
 			button.call(parent);
 	}
 
 	template<typename T, typename T2>
-	inline void StructRenderer::inflect(const String &name, Dropdown<T> &dropdown, const T2*) {
+	inline void StructRenderer::inflect(const String &name, usz, Dropdown<T> &dropdown, const T2*) {
 		usz id = dropdown.id();
 		doDropdown(name, id, dropdown.names());
 		dropdown.setId(id);
 	}
 
 	template<typename T, typename T2>
-	inline void StructRenderer::inflect(const String &name, RadioButtons<T> &radio, const T2*) {
+	inline void StructRenderer::inflect(const String &name, usz, RadioButtons<T> &radio, const T2*) {
 		usz id = radio.id();
 		doRadioButtons(name, id, radio.names());
 		radio.setId(id);
