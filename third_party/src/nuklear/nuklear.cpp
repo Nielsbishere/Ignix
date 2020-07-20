@@ -537,7 +537,7 @@ namespace igx::ui {
 	void StructRenderer::doString(const String &name, String &str, bool isConst) {
 
 		if (name.size()) {
-			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 30.f, 2);
+			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, 2);
 			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
 		}
 
@@ -580,7 +580,7 @@ namespace igx::ui {
 	void StructRenderer::doString(const String &name, c8 *str, bool isConst, usz maxSize) {
 
 		if (name.size()) {
-			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 30.f, 2);
+			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, 2);
 			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
 		}
 
@@ -730,7 +730,7 @@ namespace igx::ui {
 		if (isConst) {
 
 			if (name.size()) {
-				nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 30.f, 2);
+				nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, 2);
 				nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
 			}
 
@@ -785,7 +785,7 @@ namespace igx::ui {
 		//Edit string
 
 		if (name.size()) {
-			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 30.f, 2);
+			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, 2);
 			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
 		}
 
@@ -835,11 +835,12 @@ namespace igx::ui {
 		}
 	}
 
-	void *StructRenderer::beginList(const String &name, usz count, const void *loc) {
+	void *StructRenderer::beginList(const String &name, usz count, bool isInlineEditable, const void *loc) {
 
 		//TODO: Scrollbar
 
-		nk_layout_row_dynamic(data->ctx, float(15 * (count + 2)), 1);
+		f32 lineHeight = isInlineEditable ? 20.f : 15.f;
+		nk_layout_row_dynamic(data->ctx, isInlineEditable ? lineHeight * (count + 1) : 200, 1);
 
 		//Get nk_list_view from temporary data
 
@@ -853,8 +854,16 @@ namespace igx::ui {
 
 		//(No need to clear since nk_list_view_begin sets it
 
-		if (nk_list_view_begin(data->ctx, (nk_list_view*)v, name.c_str(), NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR, 15, (int)count)) {
-			nk_layout_row_dynamic(data->ctx, 15, 2);
+		auto flags = NK_WINDOW_BORDER;
+
+		if (isInlineEditable)
+			flags = nk_panel_flags(flags | NK_WINDOW_NO_SCROLLBAR);
+
+		if (nk_list_view_begin(data->ctx, (nk_list_view*)v, name.c_str(), flags, int(lineHeight), int(count))) {
+
+			if(isInlineEditable)
+				nk_layout_row_dynamic(data->ctx, lineHeight, 2);
+
 			return v;
 		}
 

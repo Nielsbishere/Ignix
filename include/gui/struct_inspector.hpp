@@ -180,7 +180,7 @@ namespace igx::ui {
 		void doDropdown(const String&, usz &index, const List<const c8*> &names);
 		void doRadioButtons(const String&, usz &index, const List<const c8*> &names);
 
-		void *beginList(const String &name, usz count, const void *loc);
+		void *beginList(const String &name, usz count, bool isInlineEditable, const void *loc);
 		void endList(void *ptr);
 
 		void doInt(const String&, isz size, usz requiredBufferSize, const void *loc, bool isConst, NumberFormat numberFormat);
@@ -266,23 +266,23 @@ namespace igx::ui {
 	};
 
 	template<typename T, typename T2>
-	inline void StructRenderer::inflect(const String &name, usz, const List<T> &li, const T2 *parent) {
-		inflect<true>(name, (List<T>&) li, parent);
+	inline void StructRenderer::inflect(const String &name, usz recursion, const List<T> &li, const T2 *parent) {
+		inflect<true>(name, recursion, (List<T>&) li, parent);
 	}
 
 	template<typename K, typename V, typename T2>
-	inline void StructRenderer::inflect(const String &name, usz, const HashMap<K, V> &li, const T2*) {
+	inline void StructRenderer::inflect(const String &name, usz recursion, const HashMap<K, V> &li, const T2*) {
 
 		usz j = li.size();
 
-		if (void *handle = beginList(name, j, &li)) {
+		if (void *handle = beginList(name, j, false, &li)) {
 
 			for (auto &elem : li) {
 
 				//TODO: beginElement
 
-				inflect("", elem.first, &li);
-				inflect("", elem.second, &li);
+				inflect("", recursion, elem.first, &li);
+				inflect("", recursion, elem.second, &li);
 
 				//TODO: endElement
 
@@ -293,20 +293,20 @@ namespace igx::ui {
 	}
 
 	template<typename T, typename T2, bool isConst>
-	inline void StructRenderer::inflect(const String &name, usz, List<T> &li, const T2*) {
+	inline void StructRenderer::inflect(const String &name, usz recursion, List<T> &li, const T2*) {
 
 		usz j = li.size();
 
-		if (void *handle = beginList(name, j, &li)) {
+		if (void *handle = beginList(name, j, (std::is_arithmetic_v<T> || is_string_v<T>) && !isConst, &li)) {
 
 			for (usz i = 0; i < j; ++i) {
 
 				//TODO: beginElement
 
 				if constexpr(isConst)
-					inflect(std::to_string(i), (const T&) li[i], &li);
+					inflect(std::to_string(i), recursion, (const T&) li[i], &li);
 				else
-					inflect(std::to_string(i), li[i], &li);
+					inflect(std::to_string(i), recursion, li[i], &li);
 
 				//TODO: endElement
 
@@ -317,23 +317,24 @@ namespace igx::ui {
 	}
 
 	template<typename K, typename V, typename T2, bool isConst>
-	inline void StructRenderer::inflect(const String &name, usz, HashMap<K, V> &li, const T2*) {
+	inline void StructRenderer::inflect(const String &name, usz recursion, HashMap<K, V> &li, const T2*) {
+
 
 		usz j = li.size();
 
-		if (void *handle = beginList(name, j, &li)) {
+		if (void *handle = beginList(name, j, std::is_arithmetic_v<V> || is_string_v<V>, &li)) {
 
 			for (auto &elem : li) {
 
 				//TODO: beginElement
 
 				if constexpr (isConst) {
-					inflect("", (const K&) elem.first, &li);
-					inflect("", (const V&) elem.second, &li);
+					inflect("", recursion, (const K&) elem.first, &li);
+					inflect("", recursion, (const V&) elem.second, &li);
 				}
 				else {
-					inflect("", elem.first, &li);
-					inflect("", elem.second, &li);
+					inflect("", recursion, elem.first, &li);
+					inflect("", recursion, elem.second, &li);
 				}
 
 				//TODO: endElement

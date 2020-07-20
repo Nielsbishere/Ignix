@@ -71,33 +71,15 @@ struct TestViewportInterface : public ViewportInterface {
 		//MinMaxSliderBase<f32, 0, 1> Volume = .5f;
 		//MinMaxProgress<f32, 0, 100, 0.1> Progress;
 
-		template<typename T, typename T2>														
-		void inflect(T &inflector, const T2*) {
-			inflector.inflect(
-				this, 
-				{ "Play", "Silver", "Bronze", "Gold", "Biome type" }, 
-				Button<TestStruct0, &TestStruct0::click>{}, 
-				difficulty,
-				silver,
-				bronze,
-				gold,
-				biomeType
-			);
-		}		
-
-		template<typename T, typename T2>													
-		void inflect(T &inflector, const T2*) const {
-			inflector.inflect(
-				this, 
-				{ "Play", "Silver", "Bronze", "Gold", "Biome type" }, 
-				Button<TestStruct0, &TestStruct0::click>{}, 
-				difficulty,
-				silver,
-				bronze,
-				gold,
-				biomeType
-			);							
-		}
+		InflectWithName(
+			{ "Play", "Silver", "Bronze", "Gold", "Biome type" }, 
+			Button<TestStruct0, &TestStruct0::click>{},
+			difficulty,
+			silver,
+			bronze,
+			gold,
+			biomeType
+		);
 	};
 
 	struct TestStruct1 {
