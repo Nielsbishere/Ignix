@@ -108,8 +108,6 @@ namespace igx::ui {
 
 		info.res = size.cast<Vec2i32>();
 		needsBufferUpdate = true;
-
-		//TODO: UIWindows
 	}
 
 	void GUI::requestUpdate() { 
