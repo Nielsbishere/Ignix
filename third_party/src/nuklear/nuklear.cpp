@@ -413,7 +413,18 @@ namespace igx::ui {
 
 	bool GUI::onInputUpdate(const InputDevice *dvc, InputHandle ih, bool isActive) {
 
+		bool hasFocus{};
+
+		for (auto &win : windows)
+			if (win.hasFocus()) {
+				hasFocus = true;
+				break;
+			}
+
 		if (dvc->getType() == InputDevice::Type::KEYBOARD) {
+
+			if (ih >= Key::count || !hasFocus)
+				return false;
 
 			String name = Key::nameById(ih);
 			usz nkid = NKey::idByName(name);
@@ -422,6 +433,12 @@ namespace igx::ui {
 				nk_input_key(data->ctx, nk_keys(NKey::values[nkid]), int(isActive));
 				return true;
 			}
+
+			if(isActive)
+				if (c32 character = ((Keyboard*)dvc)->getKey((ButtonHandle)ih)) {
+					nk_input_glyph(data->ctx, *(nk_glyph*)&character);
+					return true;
+				}
 
 		} else if (dvc->getType() == InputDevice::Type::MOUSE) {
 
@@ -598,6 +615,7 @@ namespace igx::ui {
 			);
 	}
 
+	template<bool isFloat = false>
 	inline String stringify(const u8 *loc, isz byteSize, NumberFormat numberFormat) {
 		
 		std::stringstream ss;
@@ -630,16 +648,24 @@ namespace igx::ui {
 				oic::System::log()->fatal("Octal stringify not supported yet");		//TODO: Octal
 
 			default:
-				switch (byteSize) {
-					case 1: ss << (u16)*(u8*)loc;		break;
-					case -1: ss << (i16)*(i8*)loc;		break;
-					case 2: ss << *(u16*)loc;			break;
-					case -2: ss << *(i16*)loc;			break;
-					case 4: ss << *(u32*)loc;			break;
-					case -4: ss << *(i32*)loc;			break;
-					case 8: ss << *(u64*)loc;			break;
-					case -8: ss << *(i64*)loc;
-				}
+
+				if constexpr(isFloat)
+					switch (byteSize) {
+						case 2:		ss << f32(*(f16*)loc);	break;
+						case 4:		ss << *(f32*)loc;		break;
+						case 8:		ss << *(f64*)loc;
+					}
+				else
+					switch (byteSize) {
+						case 1: ss << (u16)*(u8*)loc;		break;
+						case -1: ss << (i16)*(i8*)loc;		break;
+						case 2: ss << *(u16*)loc;			break;
+						case -2: ss << *(i16*)loc;			break;
+						case 4: ss << *(u32*)loc;			break;
+						case -4: ss << *(i32*)loc;			break;
+						case 8: ss << *(u64*)loc;			break;
+						case -8: ss << *(i64*)loc;
+					}
 		}
 
 		return ss.str();
@@ -724,6 +750,125 @@ namespace igx::ui {
 
 		out = i64(res) * sign;
 		return true;
+	}
+
+	void StructRenderer::doFloat(const String &name, usz byteSize, const void *loc, bool isConst, NumberFormat numberFormat) {
+
+		if (isConst) {
+
+			if (name.size()) {
+				nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, 2);
+				nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+			}
+
+			nk_label(data->ctx, stringify<true>((const u8*)loc, byteSize, numberFormat).c_str(), NK_TEXT_LEFT);
+			return;
+		}
+		
+		auto &temporaryData = map->operator[](loc);
+		temporaryData.isStillPresent = true;
+
+		//Setup data and filter out invalid data
+
+		auto &len = *(int*)temporaryData.data;
+		static constexpr usz required = 64;
+
+		if (
+			temporaryData.heapData.size() != required + byteSize + 1 || 
+			std::memcmp(temporaryData.heapData.data(), loc, byteSize)
+		) {
+
+			//Reset data
+
+			temporaryData.heapData.resize(required + byteSize + 1);
+			std::memcpy(temporaryData.heapData.data(), loc, byteSize);
+
+			//Init string
+
+			String str = stringify<true>((const u8*)loc, byteSize, numberFormat);
+
+			oicAssert("Unexpected float string out of bounds", str.size() <= required);
+
+			//Copy and set null to the end of the string
+
+			std::memcpy(temporaryData.heapData.data() + byteSize, str.data(), str.size());
+
+			usz leftOver = required - str.size() + 1;
+
+			if(leftOver)
+				std::memset(temporaryData.heapData.data() + byteSize + str.size(), 0, leftOver);
+
+			//Store length
+
+			len = (int) str.size();
+		}
+
+		if (len < 0 || len > required)
+			len = 0;
+
+		//TODO: Ignore - if unsigned, otherwise only allow at front
+		//TODO: Callbacks for runes, so input can be used
+
+		//Edit string
+
+		if (name.size()) {
+			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, 2);
+			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+		}
+
+		static constexpr nk_plugin_filter filters[] = {
+			nk_filter_float,
+			nk_filter_hex,
+			nk_filter_oct,
+			nk_filter_binary
+		};
+
+		c8 *start = (c8*)(temporaryData.heapData.data() + byteSize);
+		String prev = String(start, start + len);
+
+		//TODO: With hex values this doesn't work?
+
+		nk_edit_string(
+			data->ctx, NK_EDIT_FIELD, 
+			start, 
+			&len, (int)required + 1, 
+			filters[usz(numberFormat)]
+		);
+
+		//Output
+
+		String newStr = String(start, start + len);
+
+		if (newStr == prev)
+			return;
+
+		if (numberFormat == NumberFormat::DEC) {
+
+			char *err{};
+			f64 val = strtod(newStr.c_str(), &err);
+
+			if(err)
+				switch (byteSize) {
+					case 2:		*(f16*)loc = f32(val);	break;
+					case 4:		*(f32*)loc = f32(val);	break;
+					case 8:		*(f64*)loc = val;
+				}
+
+			return;
+		}
+
+		i64 val;
+		
+		if (!integerify(val, newStr, numberFormat, byteSize < 0))
+			return;
+
+		std::stringstream ss(newStr);
+		
+		switch (byteSize) {
+			case 2:		*(f16*)loc = *(f16*)&val;	break;
+			case 4:		*(f32*)loc = *(f32*)&val;	break;
+			case 8:		*(f64*)loc = *(f64*)&val;
+		}
 	}
 
 	void StructRenderer::doInt(const String &name, isz byteSize, usz required, const void *loc, bool isConst, NumberFormat numberFormat) {
@@ -953,16 +1098,16 @@ namespace igx::ui {
 
 	//Rendering windows
 
-	void GUI::renderWindows(List<Window> &ws) {
+	void GUI::renderWindows() {
 
 		auto *ctx = data->ctx;
 
 		List<usz> marked;
-		marked.reserve(ws.size());
+		marked.reserve(windows.size());
 
 		usz i{};
 
-		for (Window &w : ws) {
+		for (Window &w : windows) {
 
 			using Flags = Window::Flags;
 			Flags flag = w.getFlags();
@@ -1001,9 +1146,11 @@ namespace igx::ui {
 				w.updateLocation(Vec2f32(wnd->bounds.x, wnd->bounds.y), dim);
 
 				//TODO: integrade layouts
-				//TODO: labels for members
+				//TODO: labels for all members
 
 				w.render(data);
+
+				w.setFocus(nk_item_is_any_active(ctx));
 			}
 
 			nk_end(ctx);
@@ -1012,7 +1159,7 @@ namespace igx::ui {
 		}
 
 		for (auto rit = marked.rbegin(), rend = marked.rend(); rit != rend; ++rit)
-			ws.erase(ws.begin() + *rit);
+			windows.erase(windows.begin() + *rit);
 
 	}
 
@@ -1036,7 +1183,7 @@ namespace igx::ui {
 
 		//Do render
 
-		renderWindows(windows);
+		renderWindows();
 
 		//Detect if different
 

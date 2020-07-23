@@ -31,15 +31,20 @@ namespace igx::ui {
 			CLOSE				= 1 << 8,
 			MINIMIZE			= 1 << 9,
 
+			//Runtime modifiers
+
+			HAS_FOCUS			= 1 << 10,
+
 			//Combinations of flags
 
-			NONE				= 0,
-			STATIC				= INPUT | HAS_TITLE | BORDER | VISIBLE,
-			STATIONARY			= STATIC | MINIMIZE | CLOSE,
-			DEFAULT				= MOVE | SCALE | STATIONARY,
-			DEFAULT_SCROLL		= DEFAULT | SCROLL,
-			NO_MENU				= INPUT | VISIBLE | MOVE | SCALE,
-			STATIC_NO_MENU		= INPUT | VISIBLE
+			NONE						= 0,
+			STATIC						= INPUT | HAS_TITLE | BORDER | VISIBLE,
+			STATIONARY					= STATIC | MINIMIZE | CLOSE,
+			DEFAULT						= MOVE | SCALE | STATIONARY,
+			DEFAULT_SCROLL				= DEFAULT | SCROLL,
+			DEFAULT_SCROLL_NO_CLOSE		= DEFAULT_SCROLL & ~CLOSE,
+			NO_MENU						= INPUT | VISIBLE | MOVE | SCALE,
+			STATIC_NO_MENU				= INPUT | VISIBLE
 		};
 
 	private:
@@ -64,10 +69,24 @@ namespace igx::ui {
 
 		//Setters
 
-		inline void hide();
-		inline void show();
 
-		inline void setVisible(bool b);
+		inline void show() { flags = Flags(flags & ~VISIBLE); }
+		inline void hide() { flags = Flags(flags | VISIBLE); }
+		inline bool isVisible() { return bool(flags & VISIBLE); }
+
+		inline void unfocus() { flags = Flags(flags & ~HAS_FOCUS); }
+		inline void focus() { flags = Flags(flags | HAS_FOCUS); }
+		inline bool hasFocus() { return bool(flags & HAS_FOCUS); }
+
+		inline void setVisible(bool b) {
+			if (b) show();
+			else hide();
+		}
+
+		inline void setFocus(bool b) {
+			if (b) focus();
+			else unfocus();
+		}
 
 		void updateLocation(const Vec2f32 &po, const Vec2f32 &di) { pos = po; dim = di; }
 
@@ -88,15 +107,5 @@ namespace igx::ui {
 
 		inline bool operator==(const Window &window) const { return id == window.id; }
 	};
-
-	//Implementations
-
-	inline void Window::hide() { flags = Flags(flags & ~VISIBLE); }
-	inline void Window::show() { flags = Flags(flags | VISIBLE); }
-
-	inline void Window::setVisible(bool b) {
-		if (b) show();
-		else hide();
-	}
 
 }

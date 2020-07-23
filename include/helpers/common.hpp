@@ -11,6 +11,8 @@
 #include "graphics/memory/shader_buffer.hpp"
 #include "graphics/memory/upload_buffer.hpp"
 #include "graphics/memory/texture.hpp"
+#include "graphics/memory/render_texture.hpp"
+#include "graphics/memory/depth_texture.hpp"
 #include "graphics/shader/sampler.hpp"
 #include "graphics/shader/pipeline.hpp"
 #include "graphics/shader/descriptors.hpp"

@@ -72,7 +72,7 @@ namespace igx::ui {
 
 		void bakePrimitives(Graphics &g);	//Fills vertex/index buffer
 		bool prepareDrawData();				//Returns true if it should bake primitive data
-		void renderWindows(List<Window> &windows);
+		void renderWindows();
 		void draw();						//Called to fill the command list
 
 		void initData(Graphics &g);			//Init implementation dependent data and descriptors/textures

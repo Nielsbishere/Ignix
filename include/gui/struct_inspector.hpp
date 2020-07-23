@@ -32,7 +32,14 @@ namespace igx::ui {
 
 		template<typename T, typename T2, typename = std::enable_if_t<std::is_class_v<T> || std::is_union_v<T>>>
 		inline void inflect(const String &name, usz recursion, T &t, const T2 *parent) {
-			if (startStruct(name, &t, recursion)) {
+
+			if constexpr (oic::is_exposed_enum_v<T>) {
+				usz id = T::idByValue(t.value);
+				doDropdown(name, id, T::getCNames());
+				t = enum T::_E(T::values[id]);
+			}
+
+			else if (startStruct(name, &t, recursion)) {
 				t.inflect(*this, recursion, parent);
 				endStruct(name);
 			}
@@ -40,7 +47,13 @@ namespace igx::ui {
 
 		template<typename T, typename T2, typename = std::enable_if_t<std::is_class_v<T> || std::is_union_v<T>>>
 		inline void inflect(const String &name, usz recursion, const T &t, const T2 *parent) {
-			if (startStruct(name, &t, recursion)) {
+
+			if constexpr (oic::is_exposed_enum_v<T>) {
+				usz id = T::idByValue(t.value);
+				doDropdown(name, id, T::getCNames());
+			}
+
+			else if (startStruct(name, &t, recursion)) {
 				t.inflect(*this, recursion, parent);
 				endStruct(name);
 			}
@@ -97,6 +110,10 @@ namespace igx::ui {
 		template<typename T> inline void inflect(const String &name, usz, u64 &i, const T*) { doInt(name, i); }
 		template<typename T> inline void inflect(const String &name, usz, i64 &i, const T*) { doInt(name, i); }
 
+		template<typename T> inline void inflect(const String &name, usz, f16 &i, const T*) { doFloat(name, 2, (const void*) &i, false); }
+		template<typename T> inline void inflect(const String &name, usz, f32 &i, const T*) { doFloat(name, 4, (const void*) &i, false); }
+		template<typename T> inline void inflect(const String &name, usz, f64 &i, const T*) { doFloat(name, 8, (const void*) &i, false); }
+
 		template<typename T> inline void inflect(const String &name, usz, const u8 &i, const T*) { doInt(name, (u8&) i, true); }
 		template<typename T> inline void inflect(const String &name, usz, const i8 &i, const T*) { doInt(name, (i8&) i, true); }
 		template<typename T> inline void inflect(const String &name, usz, const u16 &i, const T*) { doInt(name, (u16&) i, true); }
@@ -106,13 +123,27 @@ namespace igx::ui {
 		template<typename T> inline void inflect(const String &name, usz, const u64 &i, const T*) { doInt(name, (u64&) i, true); }
 		template<typename T> inline void inflect(const String &name, usz, const i64 &i, const T*) { doInt(name, (i64&) i, true); }
 
+		template<typename T> inline void inflect(const String &name, usz, const f16 &i, const T*) { doFloat(name, 2, (const void*) &i, true); }
+		template<typename T> inline void inflect(const String &name, usz, const f32 &i, const T*) { doFloat(name, 4, (const void*) &i, true); }
+		template<typename T> inline void inflect(const String &name, usz, const f64 &i, const T*) { doFloat(name, 8, (const void*) &i, true); }
+
 		//Numbers formatted differently
 
 		template<typename T, typename T2, NumberFormat Format> 
-		inline void inflect(const String &name, usz, Val<T, Format> &format, const T2*) { doInt<Format>(name, format.value, false); }
+		inline void inflect(const String &name, usz, Val<T, Format> &format, const T2*) { 
+			if constexpr(std::is_integral_v<T>)
+				doInt<Format>(name, format.value, false); 
+			else
+				doFloat(name, sizeof(T), (const void*)&format.value, false, Format);
+		}
 
 		template<typename T, typename T2, NumberFormat Format> 
-		inline void inflect(const String &name, usz, const Val<T, Format> &format, const T2*) { doInt<Format>(name, (T&)format.value, true); }
+		inline void inflect(const String &name, usz, const Val<T, Format> &format, const T2*) { 
+			if constexpr(std::is_integral_v<T>)
+				doInt<Format>(name, (T&)format.value, true); 
+			else
+				doFloat(name, sizeof(T), (const void*)&format.value, true, Format);
+		}
 
 		//Strings
 
@@ -185,6 +216,8 @@ namespace igx::ui {
 
 		void doInt(const String&, isz size, usz requiredBufferSize, const void *loc, bool isConst, NumberFormat numberFormat);
 
+		void doFloat(const String&, usz byteSize, const void *loc, bool isConst, NumberFormat numberFormat = NumberFormat::DEC);
+
 		template<NumberFormat numberFormat = NumberFormat::DEC, typename T>
 		inline void doInt(const String &name, T &i, bool isConst = false) {
 
@@ -251,7 +284,10 @@ namespace igx::ui {
 
 			auto inflector = StructRenderer{ data, &tempData };
 
-			inflector.inflect("", 0, value, (void*)nullptr);
+			if constexpr(std::is_pointer_v<T>)
+				inflector.inflect("", 0, *value, (void*)nullptr);
+			else
+				inflector.inflect("", 0, value, (void*)nullptr);
 
 			List<const void*> toDelete;
 			toDelete.reserve(tempData.size());

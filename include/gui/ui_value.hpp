@@ -195,6 +195,9 @@ namespace igx::ui {
 		inline operator T() const { return value; }
 		inline operator T&() { return value; }
 
+		inline T operator->() const { return value; }
+		inline T operator->() { return value; }
+
 	};
 
 	//Value with representation
@@ -228,6 +231,9 @@ namespace igx::ui {
 	using i16h = Valh<i16>;
 	using i32h = Valh<i32>;
 	using i64h = Valh<i64>;
+	using f16h = Valo<f16>;
+	using f32h = Valo<f32>;
+	using f64h = Valo<f64>;
 
 	using u8o = Valo<u8>;
 	using u16o = Valo<u16>;
@@ -237,6 +243,9 @@ namespace igx::ui {
 	using i16o = Valo<i16>;
 	using i32o = Valo<i32>;
 	using i64o = Valo<i64>;
+	using f16o = Valo<f16>;
+	using f32o = Valo<f32>;
+	using f64o = Valo<f64>;
 
 	using u8b = Valb<u8>;
 	using u16b = Valb<u16>;
@@ -246,6 +255,9 @@ namespace igx::ui {
 	using i16b = Valb<i16>;
 	using i32b = Valb<i32>;
 	using i64b = Valb<i64>;
+	using f16b = Valb<f16>;
+	using f32b = Valb<f32>;
+	using f64b = Valb<f64>;
 
 	//Dropdowns and radio buttons (require oicExposedEnum)
 
