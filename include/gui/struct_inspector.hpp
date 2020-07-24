@@ -2,6 +2,7 @@
 #include "ui_value.hpp"
 #include "gui.hpp"
 #include "utils/inflect.hpp"
+#include "types/mat.hpp"
 
 namespace oic {
 	class FileSystem;
@@ -39,6 +40,22 @@ namespace igx::ui {
 				t = enum T::_E(T::values[id]);
 			}
 
+			else if constexpr (oic::is_vector_v<T>) {
+
+				doVectorHeader(name, T::ArraySize, false);
+
+				for (usz i = 0; i < T::ArraySize; ++i)
+					inflect("", recursion, t[i], parent);
+			}
+
+			else if constexpr (oic::is_matrix_v<T>) {
+
+				doMatrixHeader(name, T::Width, T::Height, false);
+
+				for (usz i = 0; i < T::Height; ++i)
+					inflect("", recursion, t.axes[i], parent);
+			}
+
 			else if (startStruct(name, &t, recursion)) {
 				t.inflect(*this, recursion, parent);
 				endStruct(name);
@@ -51,6 +68,22 @@ namespace igx::ui {
 			if constexpr (oic::is_exposed_enum_v<T>) {
 				usz id = T::idByValue(t.value);
 				doDropdown(name, id, T::getCNames());
+			}
+
+			else if constexpr (oic::is_vector_v<T>) {
+
+				doVectorHeader(name, T::ArraySize, true);
+
+				for (usz i = 0; i < T::ArraySize; ++i)
+					inflect("", recursion, t[i], parent);
+			}
+
+			else if constexpr (oic::is_matrix_v<T>) {
+
+				doMatrixHeader(name, T::Width, T::Height, true);
+
+				for (usz i = 0; i < T::Height; ++i)
+					inflect("", recursion, t.axes[i], parent);
 			}
 
 			else if (startStruct(name, &t, recursion)) {
@@ -171,24 +204,13 @@ namespace igx::ui {
 		//Structs
 
 		template<usz i = 0, typename T, typename T2, typename ...args>
-		_inline_ void inflect(const T *parent, usz recursion, const List<String> &names, T2 &t, args &&...arg) {
+		_inline_ void inflect(const T *parent, usz recursion, const List<String> &names, T2 &&t, args &&...arg) {
 
 			if constexpr (sizeof...(args) == 0)
-				inflect(names[i], recursion + 1, t, parent);
+				inflect(names[i], recursion + 1, std::forward<T2>(t), parent);
 			else {
-				inflect(names[i], recursion + 1, t, parent);	
-				inflect<i + 1>(parent, recursion, names, arg...);
-			}
-		}
-
-		template<usz i = 0, typename T, typename T2, typename ...args>
-		_inline_ void inflect(const T *parent, usz recursion, const List<String> &names, const T2 &t, args &&...arg) {
-
-			if constexpr (sizeof...(args) == 0)
-				inflect(names[i], recursion + 1, t, parent);
-			else {
-				inflect(names[i], recursion + 1, t, parent);	
-				inflect<i + 1>(parent, recursion, names, arg...);
+				inflect(names[i], recursion + 1, std::forward<T2>(t), parent);	
+				inflect<i + 1>(parent, recursion, names, std::forward<args>(arg)...);
 			}
 		}
 
@@ -203,6 +225,9 @@ namespace igx::ui {
 
 		void doString(const String&, WString &str, bool isConst);
 		void doString(const String&, c16 *str, bool isConst, usz maxSize = usz_MAX);
+
+		void doVectorHeader(const String&, usz W, bool isConst);
+		void doMatrixHeader(const String&, usz W, usz H, bool isConst);
 
 		bool doButton(const String&);
 		usz doFileSystem(const oic::FileSystem *fs, const oic::FileHandle handle, const String &path, u32&, bool maximized = false);

@@ -552,6 +552,20 @@ namespace igx::ui {
 		}
 	}
 
+	void StructRenderer::doVectorHeader(const String &name, usz W, bool isConst) {
+
+		nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, int(W) + int(bool(name.size())));
+
+		if (name.size())
+			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+
+	}
+
+	void StructRenderer::doMatrixHeader(const String &name, usz, usz, bool) {
+		nk_layout_row_dynamic(data->ctx, 15.f, 1);
+		nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+	}
+
 	void StructRenderer::doString(const String &name, String &str, bool isConst) {
 
 		if (name.size()) {
