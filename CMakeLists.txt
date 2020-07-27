@@ -21,7 +21,7 @@ file(GLOB_RECURSE depsCpp "third_party/src/*.cpp")
 file(GLOB_RECURSE testsCpp "test/*.cpp")
 
 add_subdirectory(ignis)
-add_subdirectory(igxi)
+add_subdirectory(igxi-tool)
 
 # Setup test data
 
@@ -72,9 +72,10 @@ add_library(
 target_include_directories(igx PUBLIC include)
 target_include_directories(igx PRIVATE third_party)
 target_include_directories(igx PUBLIC ignis/include)
+target_include_directories(igx PUBLIC igxi-tool/include)
+target_include_directories(igx PUBLIC igxi-tool/igxi/include)
 target_include_directories(igx PUBLIC ignis/core2/include)
-target_link_libraries(igx PRIVATE igxi)
-target_link_libraries(igx PUBLIC ignis ocore)
+target_link_libraries(igx PUBLIC ignis ocore igxi igxi-convert)
 
 if(enableNuklearBuild)
 	target_link_libraries(igx PRIVATE nuklear)

@@ -302,7 +302,7 @@ namespace igx::ui {
 				if (newSize % stride)
 					newSize = (newSize / stride + 1) * stride;
 
-				auto vboInfo = GPUBuffer::Info(newSize, GPUBufferType::VERTEX, GPUMemoryUsage::CPU_ACCESS);
+				auto vboInfo = GPUBuffer::Info(newSize, GPUBufferType::VERTEX, GPUMemoryUsage::CPU_WRITE);
 				std::memcpy(vboInfo.initData.data(), verts.memory.ptr, verts.needed);
 
 				data->vbo = {
@@ -330,7 +330,7 @@ namespace igx::ui {
 				if (newSize % stride)
 					newSize = (newSize / stride + 1) * stride;
 
-				auto iboInfo = GPUBuffer::Info(newSize, GPUBufferType::INDEX, GPUMemoryUsage::CPU_ACCESS);
+				auto iboInfo = GPUBuffer::Info(newSize, GPUBufferType::INDEX, GPUMemoryUsage::CPU_WRITE);
 				std::memcpy(iboInfo.initData.data(), idx.memory.ptr, idx.needed);
 
 				data->ibo = {
@@ -600,12 +600,19 @@ namespace igx::ui {
 				len = (int) str.size();
 			}
 
+			c8 *heapPtr = (c8*)temporaryData.heapData.data();
+
 			nk_edit_string(
 				data->ctx, NK_EDIT_FIELD, 
-				(char*)temporaryData.heapData.data(), 
+				heapPtr, 
 				&len, (int)str.capacity() + 8, 
 				nk_filter_default
 			);
+
+			String modified(heapPtr, heapPtr + len);
+
+			if(str != modified)
+				str = modified;
 		}
 	}
 
@@ -1036,7 +1043,7 @@ namespace igx::ui {
 
 	//TODO: size of combo box and of line should be changable in a layout or something
 
-	void StructRenderer::doDropdown(const String&, usz &index, const List<const c8*> &names) {
+	void StructRenderer::doDropdown(const String &name, usz &index, const List<const c8*> &names) {
 
 		auto *ctx = data->ctx;
 
@@ -1047,15 +1054,23 @@ namespace igx::ui {
 
 		//TODO: Opening two after each other seems to infinite loop?
 
-		nk_layout_row_dynamic(data->ctx, 15, 1);
+		nk_layout_row_dynamic(data->ctx, 15, 1 + bool(name.size()));
 
-		nk_combobox(ctx, names.data(), int(names.size()), &selected, 15, nk_vec2(150, 200));
+		if (name.size())
+			nk_label(data->ctx, name.c_str(), NK_TEXT_ALIGN_LEFT);
+
+		nk_combobox(ctx, names.data(), int(names.size()), &selected, 15, nk_vec2(200, 300));
 
 		index = usz(selected);
 	}
 
-	void StructRenderer::doRadioButtons(const String&, usz &index, const List<const c8*> &names) {
+	void StructRenderer::doRadioButtons(const String &name, usz &index, const List<const c8*> &names) {
 		
+		if (name.size()) {
+			nk_layout_row_dynamic(data->ctx, 15, 1);
+			nk_label(data->ctx, name.c_str(), NK_TEXT_ALIGN_LEFT);
+		}
+
 		nk_layout_row_static(data->ctx, 15, 75, 2);
 
 		for (usz i = 0; i < names.size(); ++i)
