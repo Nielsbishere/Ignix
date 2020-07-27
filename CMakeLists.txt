@@ -20,7 +20,6 @@ file(GLOB_RECURSE depsCpp "third_party/src/*.cpp")
 
 file(GLOB_RECURSE testsCpp "test/*.cpp")
 
-add_subdirectory(ignis)
 add_subdirectory(igxi-tool)
 
 # Setup test data
@@ -69,20 +68,23 @@ add_library(
 	third_party/Nuklear/nuklear.h	# Add the output of nuklear
 )
 
+get_target_property(IGNIS_SOURCE_DIR ignis SOURCE_DIR)
+get_target_property(CORE2_SOURCE_DIR ocore SOURCE_DIR)
+
 target_include_directories(igx PUBLIC include)
 target_include_directories(igx PRIVATE third_party)
-target_include_directories(igx PUBLIC ignis/include)
 target_include_directories(igx PUBLIC igxi-tool/include)
 target_include_directories(igx PUBLIC igxi-tool/igxi/include)
-target_include_directories(igx PUBLIC ignis/core2/include)
+target_include_directories(igx PUBLIC ${IGNIS_SOURCE_DIR}/include)
+target_include_directories(igx PUBLIC ${CORE2_SOURCE_DIR}/include)
 target_link_libraries(igx PUBLIC ignis ocore igxi igxi-convert)
 
 if(enableNuklearBuild)
 	target_link_libraries(igx PRIVATE nuklear)
 endif()
 
-source_group("Headers" FILES ${ignisHpp})
-source_group("Source" FILES ${ignisCpp})
+source_group("Headers" FILES ${igxHpp})
+source_group("Source" FILES ${igxCpp})
 source_group("Deps headers" FILES ${depsHpp} third_party/Nuklear/nuklear.h)
 source_group("Deps source" FILES ${depsCpp})
 source_group("Shaders" FILES ${shaders})
