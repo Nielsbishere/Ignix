@@ -225,7 +225,7 @@ struct TestViewportInterface : public ViewportInterface {
 		uniforms = {
 			g, NAME("Test pipeline uniform buffer"),
 			ShaderBuffer::Info(
-				GPUBufferType::UNIFORM, GPUMemoryUsage::SHARED | GPUMemoryUsage::CPU_ACCESS,
+				GPUBufferType::UNIFORM, GPUMemoryUsage::SHARED | GPUMemoryUsage::CPU_WRITE,
 				{ { NAME("mask"), ShaderBuffer::Layout(0, Buffer(sizeof(UniformBuffer))) } }
 			)
 		};
