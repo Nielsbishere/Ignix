@@ -56,7 +56,7 @@ namespace igx::ui {
 
 	//Sliders
 
-	template<typename T, T min, T max, T step = 0>
+	template<typename T, T min, T max, T step, bool isProgress>
 	struct MinMaxSliderBase {
 
 		static constexpr T incrementValue = step ? step : 1;
@@ -64,6 +64,10 @@ namespace igx::ui {
 		T value;
 
 		MinMaxSliderBase() {
+
+			static_assert(min < max, "Min has to be less than max");
+			static_assert(step < max - min, "Step has to be less than the range between min and max");
+			static_assert(step == 0 || oic::Math::fract(max - min / step) == 0, "Range between min and max has to be a multiple of step");
 		
 			if constexpr (min != minValue<T>())
 				value = min;
@@ -157,30 +161,12 @@ namespace igx::ui {
 	};
 
 	template<typename T, T min, T max, T step = 0>
-	using MinMaxSlider = MinMaxSliderBase<T, min, max, step>;
-
-	template<typename T, T min, T step = 0>
-	using MinSlider = MinMaxSlider<T, min, std::numeric_limits<T>::max(), step>;
-
-	template<typename T, T max, T step = 0>
-	using MaxSlider = MinMaxSlider<T, minValue<T>(), max, step>;
-
-	template<typename T, T step = 0>
-	using Slider = MinMaxSlider<T, minValue<T>(), std::numeric_limits<T>::max(), step>;
+	using Slider = MinMaxSliderBase<T, min, max, step, false>;
 
 	//Progress bar
 
 	template<typename T, T min, T max, T step = 0>
-	using MinMaxProgress = MinMaxSliderBase<T, min, max, step>;
-
-	template<typename T, T min, T step = 0>
-	using MinProgress = MinMaxProgress<T, min, std::numeric_limits<T>::max(), step>;
-
-	template<typename T, T max, T step = 0>
-	using MaxProgress = MinMaxProgress<T, minValue<T>(), max, step>;
-
-	template<typename T, T step = 0>
-	using Progress = MinMaxProgress<T, minValue<T>(), std::numeric_limits<T>::max(), step>;
+	using Progress = MinMaxSliderBase<T, min, max, step, true>;
 
 	//Generic value container
 

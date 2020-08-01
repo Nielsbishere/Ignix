@@ -552,6 +552,126 @@ namespace igx::ui {
 		}
 	}
 
+	void StructRenderer::doSliderFloat(const String &name, f64 &a, f64 min, f64 max, f64 step, bool isConst, bool isProgress) {
+
+		//If step is not specified, slider is in perdecamille (1/10th promille)
+		//This is so halfs can also represent the numbers correctly
+		if (step == 0)
+			step = 1e-4 * (max - min);
+
+		if (isProgress) {
+
+			f64 range = (max - min) / step;
+
+			if (std::isnan(range) || std::isinf(range) || range >= f64(u64_MAX)) {
+				oic::System::log()->error("Invalid step value");
+				return;
+			}
+
+		}
+
+		else if (max > f32_MAX) {
+			oic::System::log()->error("Nuklear can't represent doubles in sliders");
+			return;
+		}
+
+		if (name.size()) {
+			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, 2);
+			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+		}
+
+		if (isProgress) {
+			nk_size steps = nk_size ((a - min) / step);
+			nk_progress(data->ctx, &steps, nk_size((max - min) / step), !isConst);
+			a = steps * step + min;
+		}
+		else {
+			f32 v = f32(a);
+			nk_slider_float(data->ctx, f32(min), &v, f32(max), f32(step));
+			a = v;
+		}
+	}
+
+	void StructRenderer::doSliderUInt(const String &name, u64 &a, u64 min, u64 max, u64 step, bool isConst, bool isProgress) {
+
+		if (step == 0)
+			step = 1;
+
+		if (isProgress) {
+
+			//Only for 32-bit
+
+			if constexpr (sizeof(u64) != sizeof(nk_size)) {
+				if ((max - min) > u32_MAX) {
+					oic::System::log()->error("Nuklear can't represent values that don't fit into a uint");
+					return;
+				}
+			}
+
+		}
+
+		else if (max >= 1_u64 << (8 * sizeof(int) - 1)) {
+			oic::System::log()->error("Nuklear can't represent values that don't fit into an int. Use a progress bar instead");
+			return;
+		}
+
+		if (name.size()) {
+			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, 2);
+			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+		}
+
+		if (isProgress) {
+			nk_size v = nk_size(a - min);
+			nk_progress(data->ctx, &v, nk_size(max - min), !isConst);
+			a = u64(v) + min;
+		}
+		else {
+			int v = int(a);
+			nk_slider_int(data->ctx, int(min), &v, int(max), int(step));
+			a = u64(v);
+		}
+	}
+
+	void StructRenderer::doSliderInt(const String &name, i64 &a, i64 min, i64 max, i64 step, bool isConst, bool isProgress) {
+
+		if (step == 0)
+			step = 1;
+
+		if (isProgress) {
+
+			//Only for 32-bit
+
+			if constexpr (sizeof(i64) != sizeof(nk_size)) {
+				if (u64(max - min) > i32_MAX) {
+					oic::System::log()->error("Nuklear can't represent values that don't fit into a uint");
+					return;
+				}
+			}
+
+		}
+
+		else if (min < i32_MIN || max > i32_MAX) {
+			oic::System::log()->error("Nuklear can't represent values that don't fit into an int");
+			return;
+		}
+
+		if (name.size()) {
+			nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, 2);
+			nk_label(data->ctx, name.c_str(), NK_TEXT_LEFT);
+		}
+
+		if (isProgress) {
+			nk_size v = nk_size(a - min);
+			nk_progress(data->ctx, &v, nk_size(max - min), !isConst);
+			a = i64(v + min);
+		}
+		else {
+			int v = int(a);
+			nk_slider_int(data->ctx, int(min), &v, int(max), int(step));
+			a = i64(v);
+		}
+	}
+
 	void StructRenderer::doVectorHeader(const String &name, usz W, bool isConst) {
 
 		nk_layout_row_dynamic(data->ctx, isConst ? 15.f : 20.f, int(W) + int(bool(name.size())));
