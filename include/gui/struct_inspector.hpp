@@ -132,6 +132,44 @@ namespace igx::ui {
 		template<typename K, typename V, typename T2>
 		inline void inflect(const String &name, usz, const HashMap<K, V> &li, const T2*);
 
+		//Sliders from base types
+
+		template<
+			typename T, T min, T max, T step, bool isProgress, 
+			typename T2
+		>
+		inline void inflect(const String &name, usz, const MinMaxSliderBase<T, min, max, step, isProgress> &val, const T2*) {
+
+			typename oic::largest_primitive_t<T> v = val.value;
+
+			if constexpr (oic::is_float_type_v<T>)
+				doSliderFloat(name, v, min, max, step, true, isProgress);
+
+			else if constexpr (std::is_signed_v<T>)
+				doSliderInt(name, v, min, max, step, true, isProgress);
+
+			else doSliderUInt(name, v, min, max, step, true, isProgress);
+		}
+
+		template<
+			typename T, T min, T max, T step, bool isProgress, 
+			typename T2
+		>
+		inline void inflect(const String &name, usz, MinMaxSliderBase<T, min, max, step, isProgress> &val, const T2*) {
+
+			typename oic::largest_primitive_t<T> v = val.value;
+
+			if constexpr (oic::is_float_type_v<T>)
+				doSliderFloat(name, v, min, max, step, true, isProgress);
+
+			else if constexpr (std::is_signed_v<T>)
+				doSliderInt(name, v, min, max, step, true, isProgress);
+
+			else doSliderUInt(name, v, min, max, step, true, isProgress);
+
+			val.value = T(v);
+		}
+
 		//Base types
 
 		template<typename T> inline void inflect(const String &name, usz, u8 &i, const T*) { doInt(name, i); }
@@ -228,6 +266,10 @@ namespace igx::ui {
 
 		void doVectorHeader(const String&, usz W, bool isConst);
 		void doMatrixHeader(const String&, usz W, usz H, bool isConst);
+
+		void doSliderFloat(const String&, f64 &a, f64 min, f64 max, f64 step, bool isConst, bool isProgress);
+		void doSliderUInt(const String&, u64 &a, u64 min, u64 max, u64 step, bool isConst, bool isProgress);
+		void doSliderInt(const String&, i64 &a, i64 min, i64 max, i64 step, bool isConst, bool isProgress);
 
 		bool doButton(const String&);
 		usz doFileSystem(const oic::FileSystem *fs, const oic::FileHandle handle, const String &path, u32&, bool maximized = false);
