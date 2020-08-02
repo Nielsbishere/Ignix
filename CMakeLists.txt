@@ -78,6 +78,7 @@ get_target_property(CORE2_SOURCE_DIR ocore SOURCE_DIR)
 
 target_include_directories(igx PUBLIC include)
 target_include_directories(igx PRIVATE third_party)
+target_include_directories(igx PRIVATE third_party/include)
 target_include_directories(igx PUBLIC igxi-tool/include)
 target_include_directories(igx PUBLIC igxi-tool/igxi/include)
 target_include_directories(igx PUBLIC ${IGNIS_SOURCE_DIR}/include)
