@@ -72,7 +72,7 @@ struct TestViewportInterface : public ViewportInterface {
 		//MinMaxProgress<f32, 0, 100, 0.1> Progress;
 
 		InflectWithName(
-			{ "Play", "Silver", "Bronze", "Gold", "Biome type" }, 
+			{ "Play", "Difficulty", "Silver", "Bronze", "Gold", "Biome type" }, 
 			Button<TestStruct0, &TestStruct0::click>{},
 			difficulty,
 			silver,
@@ -138,13 +138,13 @@ struct TestViewportInterface : public ViewportInterface {
 		intermediate = {
 			g, NAME("Framebuffer"),
 			Framebuffer::Info(
-				{ GPUFormat::sRGBA8 }, DepthFormat::D32, false, msaa
+				{ GPUFormat::srgba8 }, DepthFormat::D32, false, msaa
 			)
 		};
 
 		//Create primitive buffer
 
-		List<BufferAttributes> attrib{ { 0, GPUFormat::RGB32f }, { 1, GPUFormat::RG32f } };
+		List<BufferAttributes> attrib{ { 0, GPUFormat::rgb32f }, { 1, GPUFormat::rg32f } };
 
 		const List<Vec3f32> positionBuffer{
 
@@ -201,12 +201,12 @@ struct TestViewportInterface : public ViewportInterface {
 		};
 
 		const List<u16> iboBuffer{
-			0,3,2, 2,1,0,			//Bottom
-			4,5,6, 6,7,4,			//Top
-			8,11,10, 10,9,8,		//Back
-			12,13,14, 14,15,12,		//Front
-			16,19,18, 18,17,16,		//Left
-			20,21,22, 22,23,20		//Right
+			0,1,2, 2,3,0,			//Bottom
+			4,7,6, 6,5,4,			//Top
+			8,9,10, 10,11,8,		//Back
+			12,15,14, 14,13,12,		//Front
+			16,17,18, 18,19,16,		//Left
+			20,23,22, 22,21,20		//Right
 		};
 
 		mesh = {
@@ -216,7 +216,7 @@ struct TestViewportInterface : public ViewportInterface {
 					BufferLayout(positionBuffer, attrib[0]),
 					BufferLayout(uvBuffer, attrib[1])
 				},
-				BufferLayout(iboBuffer, { 0, GPUFormat::R16u })
+				BufferLayout(iboBuffer, { 0, GPUFormat::r16u })
 			)
 		};
 
@@ -252,7 +252,7 @@ struct TestViewportInterface : public ViewportInterface {
 				List<Grid2D<u32>>{
 					rgba0, rgba1
 				},
-				GPUFormat::RGBA8, GPUMemoryUsage::LOCAL, 2
+				GPUFormat::rgba8, GPUMemoryUsage::LOCAL, 2
 			)
 		};
 
@@ -265,18 +265,12 @@ struct TestViewportInterface : public ViewportInterface {
 		computeOutput = {
 			g, NAME("Compute output"),
 			Texture::Info(
-				Vec2u16{ 512, 512 }, GPUFormat::RGBA16f, GPUMemoryUsage::LOCAL, 1, 1
+				Vec2u16{ 512, 512 }, GPUFormat::rgba16f, GPUMemoryUsage::GPU_WRITE, 1, 1
 			)
 		};
 
 		//Load shader code
 		//(Compute output 512x512)
-
-		Buffer comp;
-		bool success = oic::System::files()->read(VIRTUAL_FILE("~/shaders/test.comp.spv"), comp);
-
-		if (!success)
-			oic::System::log()->fatal("Couldn't find compute shader");
 
 		//Create layout for compute
 
@@ -285,13 +279,13 @@ struct TestViewportInterface : public ViewportInterface {
 			PipelineLayout::Info(
 				RegisterLayout(
 					NAME("Output"), 0,
-					TextureType::TEXTURE_2D, 0,
-					ShaderAccess::COMPUTE, GPUFormat::RGBA16f, true
+					TextureType::TEXTURE_2D, 0, 0,
+					ShaderAccess::COMPUTE, GPUFormat::rgba16f, true
 				)
 			)
 		};
 
-		auto descriptorsInfo = Descriptors::Info(computePipelineLayout, {});
+		auto descriptorsInfo = Descriptors::Info(computePipelineLayout, 0, {});
 		descriptorsInfo.resources[0] = { computeOutput, TextureType::TEXTURE_2D };
 
 		computeDescriptors = {
@@ -305,22 +299,12 @@ struct TestViewportInterface : public ViewportInterface {
 			g, NAME("Compute pipeline"),
 			Pipeline::Info(
 				Pipeline::Flag::NONE,
-				comp,
+				VIRTUAL_FILE("~/shaders/test.comp.spv"),
+				{},
 				computePipelineLayout,
 				Vec3u32{ 16, 16, 1 }
 			)
 		};
-
-
-		//Load shader code
-		//(Mask shader)
-
-		Buffer vert, frag;
-		success =	oic::System::files()->read(VIRTUAL_FILE("~/shaders/test.vert.spv"), vert);
-		success		&=	oic::System::files()->read(VIRTUAL_FILE("~/shaders/test.frag.spv"), frag);
-
-		if (!success)
-			oic::System::log()->fatal("Couldn't find shaders");
 
 		//Create descriptors that should be bound
 
@@ -332,19 +316,19 @@ struct TestViewportInterface : public ViewportInterface {
 
 				RegisterLayout(
 					NAME("Test"), 0,
-					GPUBufferType::UNIFORM, 0,
+					GPUBufferType::UNIFORM, 0, 0,
 					ShaderAccess::VERTEX_FRAGMENT, uniforms->size()
 				),
 
 				RegisterLayout(
 					NAME("test"), 1,
-					SamplerType::SAMPLER_2D, 0,
+					SamplerType::SAMPLER_2D, 0, 0,
 					ShaderAccess::FRAGMENT
 				)
 			)
 		};
 
-		descriptorsInfo = Descriptors::Info(pipelineLayout, {});
+		descriptorsInfo = Descriptors::Info(pipelineLayout, 0, {});
 		descriptorsInfo.resources[0] = GPUSubresource(uniforms, 0);
 
 		descriptorsInfo.resources[1] = GPUSubresource(
@@ -367,9 +351,11 @@ struct TestViewportInterface : public ViewportInterface {
 
 				attrib,
 
-				HashMap<ShaderStage, Pair<Buffer, String>>{
-					{ ShaderStage::VERTEX, { vert, "main" } },
-					{ ShaderStage::FRAGMENT, { frag, "main" } }
+				{},
+
+				HashMap<ShaderStage, Pair<String, String>>{
+					{ ShaderStage::VERTEX, { VIRTUAL_FILE("~/shaders/test.vert.spv"), "main" } },
+					{ ShaderStage::FRAGMENT, { VIRTUAL_FILE("~/shaders/test.frag.spv"), "main" } }
 				},
 
 				pipelineLayout,
@@ -468,7 +454,6 @@ struct TestViewportInterface : public ViewportInterface {
 	//TODO: Fix crash on exit
 	//TODO: Every execution should copy that command buffer, to ensure resources aren't removed
 	//TODO: Remove the name restriction, since resources can be destroyed on one thread but created on another
-	//TODO: Figure out when nsight and renderdoc stopped working and why
 
 	//Update size of surfaces
 
@@ -568,9 +553,7 @@ int main() {
 		)
 	);
 
-	//TODO: Better way of stalling than this; like interrupt
-	while (System::viewportManager()->size())
-		System::wait(250_ms);
+	System::viewportManager()->waitForExit();
 
 	return 0;
 }
