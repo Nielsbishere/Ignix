@@ -41,7 +41,7 @@ namespace igx::ui {
 
 		List<oic::Monitor> monitors;
 
-		BufferAttributes vertexLayout = { 0, GPUFormat::RG32f, GPUFormat::RG32f, GPUFormat::RGBA8 };	//vec2 pos, vec2 uv, vec4un8 color
+		BufferAttributes vertexLayout = { 0, GPUFormat::rg32f, GPUFormat::rg32f, GPUFormat::rgba8 };	//vec2 pos, vec2 uv, vec4un8 color
 
 		PipelineLayoutRef pipelineLayout;
 

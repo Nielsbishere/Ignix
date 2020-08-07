@@ -67,7 +67,11 @@ namespace igx::ui {
 
 			static_assert(min < max, "Min has to be less than max");
 			static_assert(step < max - min, "Step has to be less than the range between min and max");
-			static_assert(step == 0 || oic::Math::fract(max - min / step) == 0, "Range between min and max has to be a multiple of step");
+
+			if constexpr(oic::is_float_type_v<T>)
+				static_assert(step == 0 || oic::Math::fract((max - min) / step) == 0, "Range between min and max has to be a multiple of step");
+			else
+				static_assert(step == 0 || (max - min) / step * step == max - min, "Range between min and max has to be a multiple of step");
 		
 			if constexpr (min != minValue<T>())
 				value = min;

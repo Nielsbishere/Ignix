@@ -47,23 +47,24 @@ namespace igx::ui {
 			Sampler::Info(SamplerMin::LINEAR, SamplerMag::LINEAR, SamplerMode::REPEAT, 1)
 		};
 
-		Buffer vertShader, fragShader;
-
-		oicAssert("Couldn't find pass through vertex shader", oic::System::files()->read(VIRTUAL_FILE("~/igx/shaders/gui.vert.spv"), vertShader));
-		oicAssert("Couldn't find pass through fragment shader", oic::System::files()->read(VIRTUAL_FILE("~/igx/shaders/gui.frag.spv"), fragShader));
-
 		bool hasFb = !(flags & Flags::OWNS_FRAMEBUFFER);
 
 		uiShader = {
 			g, NAME("GUI pipeline"),
 			Pipeline::Info(
+
 				Pipeline::Flag::NONE,
-				{ vertexLayout },
-				{
-					{ ShaderStage::VERTEX, { vertShader, "main" } },
-					{ ShaderStage::FRAGMENT, { fragShader, "main" } }
+
+				List<BufferAttributes>{ vertexLayout },
+
+				HashMap<String, Buffer>{},
+				HashMap<ShaderStage, Pair<String, String>>{
+					{ ShaderStage::VERTEX, { VIRTUAL_FILE("~/igx/shaders/gui.vert.spv"), "main" } },
+					{ ShaderStage::FRAGMENT, { VIRTUAL_FILE("~/igx/shaders/gui.frag.spv"), "main" } }
 				},
+
 				pipelineLayout,
+
 				MSAA(hasFb ? target->getInfo().samples : msaa, .2f),
 				DepthStencil(),
 				Rasterizer(CullMode::NONE),
@@ -82,7 +83,7 @@ namespace igx::ui {
 			target = {
 				g, NAME("GUI framebuffer"),
 				Framebuffer::Info(
-					{ GPUFormat::sRGBA8 },
+					{ GPUFormat::srgba8 },
 					DepthFormat::NONE,
 					false,
 					msaa

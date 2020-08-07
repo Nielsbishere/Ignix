@@ -55,9 +55,9 @@ namespace igx::ui {
 		pipelineLayout = {
 			g, NAME("UI Pipeline layout"),
 			PipelineLayout::Info{
-				RegisterLayout(NAME("Input texture"), 0, SamplerType::SAMPLER_2D, 0, ShaderAccess::FRAGMENT),
-				RegisterLayout(NAME("GUI Info"), 1, GPUBufferType::UNIFORM, 0, ShaderAccess::VERTEX_FRAGMENT, sizeof(GUIInfo)),
-				RegisterLayout(NAME("Monitor buffer"), 2, GPUBufferType::STRUCTURED, 0, ShaderAccess::FRAGMENT, sizeof(oic::Monitor)),
+				RegisterLayout(NAME("Input texture"), 0, SamplerType::SAMPLER_2D, 0, 0, ShaderAccess::FRAGMENT),
+				RegisterLayout(NAME("GUI Info"), 1, GPUBufferType::UNIFORM, 0, 0, ShaderAccess::VERTEX_FRAGMENT, sizeof(GUIInfo)),
+				RegisterLayout(NAME("Monitor buffer"), 2, GPUBufferType::STRUCTURED, 0, 0, ShaderAccess::FRAGMENT, sizeof(oic::Monitor)),
 			}
 		};
 
@@ -78,6 +78,9 @@ namespace igx::ui {
 
 		nk_font_atlas_begin(&atlas);
 
+		//TODO: Get font from oic::System
+		//		Saving memory (maybe allowing us to be < 0.5 MiB)
+
 		Buffer font;
 		oicAssert("GUI font required", oic::System::files()->read(VIRTUAL_FILE("~/igx/fonts/calibri.ttf"), font));
 
@@ -87,7 +90,7 @@ namespace igx::ui {
 		u8 *atlasData = (u8*) nk_font_atlas_bake(&atlas, &width, &height, NK_FONT_ATLAS_ALPHA8);
 
 		Texture::Info tinfo(
-			Vec2u16{ u16(width), u16(height) }, GPUFormat::R8, GPUMemoryUsage::LOCAL, 1, 1
+			Vec2u16{ u16(width), u16(height) }, GPUFormat::r8, GPUMemoryUsage::LOCAL, 1, 1
 		);
 
 		tinfo.init({ Buffer(atlasData, atlasData + usz(width) * height) });
@@ -102,7 +105,7 @@ namespace igx::ui {
 
 		descriptors = {
 			g, NAME("Atlas descriptor"),
-			Descriptors::Info(pipelineLayout, resources)
+			Descriptors::Info(pipelineLayout, 0, resources)
 		};
 
 		nk_font_atlas_end(&atlas, nk_handle_ptr(data->textureAtlas.get()), &data->nullTexture);
@@ -226,7 +229,7 @@ namespace igx::ui {
 					g, NAME("Primitive buffer"),
 					PrimitiveBuffer::Info(
 						BufferLayout(data->vbo, vertexLayout),
-						BufferLayout(data->ibo, BufferAttributes(0, GPUFormat::R32u))
+						BufferLayout(data->ibo, BufferAttributes(0, GPUFormat::r32u))
 					)
 				};
 			}
