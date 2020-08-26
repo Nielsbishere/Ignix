@@ -4,14 +4,9 @@ project(igx)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-if(MSVC)
-	add_compile_options("/std:c++latest")
-else()
-	add_compile_options("-std=c++latest")
-endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -142,11 +137,16 @@ if(enableIgxTest)
 	configure_virtual_files(igx_test)
 	
 	if(doShaderRecreate)
-		if(WIN32)
-			add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.bat ${shaders} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders")
-		else()
-			add_custom_command(TARGET igx_test POST_BUILD COMMAND compile.sh ${shaders} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders")
-		endif()
+
+		add_custom_command(
+			TARGET igx_test 
+			PRE_BUILD COMMAND
+			ARGS
+			"${CMAKE_CURRENT_SOURCE_DIR}/res/shaders/compile"
+			"$<$<CONFIG:debug>:-d>"
+			${shaders}
+		)
+
 	endif()
 
 	if(MSVC)

@@ -4,20 +4,20 @@
 namespace igx {
 
 	static String sceneObjectNames[u8(SceneObjectType::COUNT)] = {
-		" triangles",
 		" lights",
 		" materials",
-		" cubes",
+		" triangles",
 		" spheres",
+		" cubes",
 		" planes"
 	};
 
 	static constexpr usz sceneObjectStrides[u8(SceneObjectType::COUNT)] = {
-		sizeof(Triangle),
 		sizeof(Light),
 		sizeof(Material),
-		sizeof(Cube),
+		sizeof(Triangle),
 		sizeof(Sphere),
+		sizeof(Cube),
 		sizeof(Plane)
 	};
 
@@ -25,13 +25,13 @@ namespace igx {
 		FactoryContainer &factory,
 		const String &sceneName,
 		const String &skyboxName,
-		Flags flags,
 		u32 maxTriangles,
 		u32 maxLights,
 		u32 maxMaterials,
 		u32 maxCubes,
 		u32 maxSpheres,
-		u32 maxPlanes
+		u32 maxPlanes,
+		Flags flags
 	):
 		factory(factory),
 		flags(flags),
@@ -52,12 +52,18 @@ namespace igx {
 				igxi::Helper::loadDiskExternal(skyboxName, factory.getGraphics())
 			};
 
+		u32 totalObjectCount{};
+
 		for (SceneObjectType type = SceneObjectType::FIRST; type != SceneObjectType::COUNT; type = SceneObjectType(u8(type) + 1)) {
 
 			u32 objectCount = limits.objectCount[u8(type)];
 
 			if (objectCount == 0)
 				continue;
+
+			oicAssert("Only up to 4B primitives supported in scene graph", totalObjectCount < totalObjectCount + objectCount);
+
+			totalObjectCount += objectCount;
 
 			objects[u8(type)] = Object {
 				GPUBufferRef(
@@ -72,6 +78,16 @@ namespace igx {
 				List<u64>(objectCount)
 			};
 		}
+
+		materialIndices = {
+			factory.getGraphics(), NAME("Scene material indices"),
+			GPUBuffer::Info(
+				totalObjectCount * sizeof(u32), GPUBufferType::STRUCTURED,
+				GPUMemoryUsage::CPU_WRITE
+			)
+		};
+
+		materialByObject = (u32*) materialIndices->getBuffer();
 
 		linear = factory.get(NAME("Linear sampler"), Sampler::Info(
 			SamplerMin::LINEAR, SamplerMag::LINEAR, SamplerMode::CLAMP_BORDER, 1.f
@@ -99,9 +115,10 @@ namespace igx {
 					{ 3, GPUSubresource(objects[u8(SceneObjectType::SPHERE)].buffer) },
 					{ 4, GPUSubresource(objects[u8(SceneObjectType::CUBE)].buffer) },
 					{ 5, GPUSubresource(objects[u8(SceneObjectType::PLANE)].buffer) },
-					{ 5, GPUSubresource(objects[u8(SceneObjectType::LIGHT)].buffer) },
-					{ 5, GPUSubresource(objects[u8(SceneObjectType::MATERIAL)].buffer) },
-					{ 5, GPUSubresource(linear, skybox, TextureType::TEXTURE_2D) }
+					{ 6, GPUSubresource(objects[u8(SceneObjectType::LIGHT)].buffer) },
+					{ 7, GPUSubresource(objects[u8(SceneObjectType::MATERIAL)].buffer) },
+					{ 8, GPUSubresource(materialIndices) },
+					{ 9, GPUSubresource(linear, skybox, TextureType::TEXTURE_2D) }
 				}
 			)
 		};
@@ -156,10 +173,15 @@ namespace igx {
 				ShaderAccess::COMPUTE, sizeof(Material)
 			),
 
+			RegisterLayout(
+				NAME("Material indices"), 8, GPUBufferType::STRUCTURED, 6, 1,
+				ShaderAccess::COMPUTE, sizeof(u32)
+			),
+
 			//Skybox
 
 			RegisterLayout(
-				NAME("Skybox"), 8, SamplerType::SAMPLER_2D, 0, 1,
+				NAME("Skybox"), 9, SamplerType::SAMPLER_2D, 0, 1,
 				ShaderAccess::COMPUTE
 			)
 		};
@@ -171,7 +193,8 @@ namespace igx {
 
 		cl->add(
 			FlushImage(skybox, factory.getDefaultUploadBuffer()),
-			FlushBuffer(sceneData, factory.getDefaultUploadBuffer())
+			FlushBuffer(sceneData, factory.getDefaultUploadBuffer()),
+			FlushBuffer(materialIndices, factory.getDefaultUploadBuffer())
 		);
 
 		for (auto &obj : objects)
@@ -181,6 +204,8 @@ namespace igx {
 	}
 
 	void SceneGraph::update(f64) {
+
+		geometryId = 0;
 
 		for (SceneObjectType type = SceneObjectType::FIRST; type != SceneObjectType::COUNT; type = SceneObjectType(u8(type) + 1)) {
 
@@ -242,12 +267,12 @@ namespace igx {
 
 			auto it = find(i);
 
-			if (it == indices.end())
+			if (it == entries.end())
 				continue;
 
-			objects[u8(it->first)].toIndex[it->second.second] = 0;
-			objects[u8(it->first)].markedForUpdate[it->second.second] = false;
-			indices.erase(it);
+			objects[u8(it->first)].toIndex[it->second.index] = 0;
+			objects[u8(it->first)].markedForUpdate[it->second.index] = false;
+			entries.erase(it);
 		}
 
 	}
@@ -286,7 +311,7 @@ namespace igx {
 					}
 
 					++j;
-					++counters[lc[i].lightType.value];
+					++counters[lc[i].type.value];
 				}
 
 				for (usz i = 0; i < LightType::count; ++i)
@@ -308,7 +333,7 @@ namespace igx {
 					if (!id)
 						continue;
 
-					usz lightTypeId = usz(lc[i].lightType.value);
+					usz lightTypeId = usz(lc[i].type.value);
 					u32 &localId = counters0[lightTypeId];
 
 					u32 globalId = localId;
@@ -320,14 +345,13 @@ namespace igx {
 
 					obj.toIndex[globalId] = id;
 
-					if (indices[id].second != globalId) {
+					if (entries[id].index != globalId) {
 						obj.markedForUpdate[i] = false;
 						obj.markedForUpdate[globalId] = true;
-						indices[id].second = globalId;
+						entries[id].index = globalId;
 					}
 
 					std::memcpy(gpuPtr + globalId * stride, cpuPtr + i * stride, stride);
-					++j;
 				}
 
 				break;
@@ -339,11 +363,33 @@ namespace igx {
 
 				//Detect if dead space exists, otherwise don't mark dirty
 
-				for (u32 i = 0; i < count; ++i)
-					if (!obj.toIndex[i]) {
+				for (u32 i = 0; i < count; ++i) {
+
+					u64 id = obj.toIndex[i];
+
+					//TODO: Update all geometry if the material ids change
+
+					if (!id) {
+
+						//TODO: Change material of geometries to 0
+
 						needsRemap = true;
-						break;
+						continue;
 					}
+
+					if (type != SceneObjectType::MATERIAL) {
+
+						u32 &dst = materialByObject[geometryId];
+						u32 src = entries[id].material;
+
+						if (dst != src) {
+							dst = src;
+							materialIndices->flush(geometryId * sizeof(u32), sizeof(u32));
+						}
+
+						++geometryId;
+					}
+				}
 
 				if (!needsRemap)
 					return;
@@ -359,10 +405,10 @@ namespace igx {
 
 					obj.toIndex[j] = id;
 
-					if (indices[id].second != j) {
+					if (entries[id].index != j) {
 						obj.markedForUpdate[i] = false;
 						obj.markedForUpdate[j] = true;
-						indices[id].second = j;
+						entries[id].index = j;
 					}
 
 					std::memcpy(gpuPtr + j * stride, cpuPtr + i * stride, stride);

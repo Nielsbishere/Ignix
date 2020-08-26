@@ -7,44 +7,52 @@ namespace igx {
 	//Scene object type and helpers
 
 	enum class SceneObjectType : u8 {
-		TRIANGLE,
 		LIGHT,
 		MATERIAL,
-		CUBE,
+		TRIANGLE,
 		SPHERE,
+		CUBE,
 		PLANE,
 		COUNT,
-		FIRST = TRIANGLE
+		FIRST = LIGHT
 	};
 
-	template<SceneObjectType t>
+	template<SceneObjectType t, bool _isGeometry, bool _isValid = true>
 	struct TSceneObjectType_Base {
 		static constexpr SceneObjectType type = t;
+		static constexpr bool isGeometry = _isGeometry;
+		static constexpr bool isValid = _isValid;
 	};
 
 	template<typename T>
-	struct TSceneObjectType : TSceneObjectType_Base<SceneObjectType::COUNT> { };
+	struct TSceneObjectType : TSceneObjectType_Base<SceneObjectType::COUNT, false, false> { };
 
 	template<>
-	struct TSceneObjectType<Triangle> : TSceneObjectType_Base<SceneObjectType::TRIANGLE> { };
+	struct TSceneObjectType<Triangle> : TSceneObjectType_Base<SceneObjectType::TRIANGLE, true> { };
 
 	template<>
-	struct TSceneObjectType<Light> : TSceneObjectType_Base<SceneObjectType::LIGHT> { };
+	struct TSceneObjectType<Light> : TSceneObjectType_Base<SceneObjectType::LIGHT, false> { };
 
 	template<>
-	struct TSceneObjectType<Material> : TSceneObjectType_Base<SceneObjectType::MATERIAL> { };
+	struct TSceneObjectType<Material> : TSceneObjectType_Base<SceneObjectType::MATERIAL, false> { };
 
 	template<>
-	struct TSceneObjectType<Cube> : TSceneObjectType_Base<SceneObjectType::CUBE> { };
+	struct TSceneObjectType<Cube> : TSceneObjectType_Base<SceneObjectType::CUBE, true> { };
 
 	template<>
-	struct TSceneObjectType<Sphere> : TSceneObjectType_Base<SceneObjectType::SPHERE> { };
+	struct TSceneObjectType<Sphere> : TSceneObjectType_Base<SceneObjectType::SPHERE, true> { };
 
 	template<>
-	struct TSceneObjectType<Plane> : TSceneObjectType_Base<SceneObjectType::PLANE> { };
+	struct TSceneObjectType<Plane> : TSceneObjectType_Base<SceneObjectType::PLANE, true> { };
 
 	template<typename T>
 	static constexpr SceneObjectType SceneObjectType_t = TSceneObjectType<T>::type;
+
+	template<typename T>
+	static constexpr bool SceneObjectTypeIsGeometry = TSceneObjectType<T>::isGeometry;
+
+	template<typename T>
+	static constexpr bool SceneObjectTypeIsValid = TSceneObjectType<T>::isValid;
 
 	//Scene graph and info passed to GPU
 
@@ -58,7 +66,7 @@ namespace igx {
 		};
 
 		struct {
-			u32 triangleCount, lightCount, materialCount, cubeCount, sphereCount, planeCount;
+			u32 lightCount, materialCount, triangleCount, sphereCount, cubeCount, planeCount;
 			u32 directionalLightCount, spotLightCount, pointLightCount;
 		};
 	};
@@ -74,6 +82,11 @@ namespace igx {
 			List<u64> toIndex;
 		};
 
+		struct Entry {
+			u32 index, material;
+			SceneObjectType type;
+		};
+
 		enum class Flags : u32 {
 			NONE = 0
 		};
@@ -84,17 +97,19 @@ namespace igx {
 
 		Object objects[u8(SceneObjectType::COUNT)];
 
-		HashMap<u64, Pair<SceneObjectType, u32>> indices{};
+		HashMap<u64, Entry> entries{};
 		u64 counter{};
 
 		SceneGraphInfo *info, limits;
 		DescriptorsRef descriptors;
 		PipelineLayoutRef layout;
-		GPUBufferRef sceneData;
+		GPUBufferRef sceneData, materialIndices;
 
 		SamplerRef linear;
 		TextureRef skybox;
 
+		u32 geometryId{};
+		u32 *materialByObject{};
 		Flags flags;
 
 		bool isModified = true;
@@ -111,13 +126,13 @@ namespace igx {
 			FactoryContainer &factory,
 			const String &sceneName,
 			const String &skyboxName,
-			Flags flags = Flags::NONE,
 			u32 maxTriangles = 65536,
 			u32 maxLights = 65536,
 			u32 maxMaterials = 65536,
 			u32 maxCubes = 32768,
 			u32 maxSpheres = 16384,
-			u32 maxPlanes = 256
+			u32 maxPlanes = 256,
+			Flags flags = Flags::NONE
 		);
 
 		virtual ~SceneGraph() {}
@@ -134,8 +149,8 @@ namespace igx {
 		template<typename T, typename ...args>
 		inline void add(const T &object, const args &...arg);
 
-		inline auto find(u64 index) const { return indices.find(index); }
-		inline bool exists(u64 index) const { return find(index) != indices.end(); }
+		inline auto find(u64 index) const { return entries.find(index); }
+		inline bool exists(u64 index) const { return find(index) != entries.end(); }
 
 		//Update an index 
 		//Returns false if invalid index
@@ -180,7 +195,7 @@ namespace igx {
 		do {
 			++counter;
 		}
-		while(!counter || indices.find(counter) != indices.end());
+		while(!counter || entries.find(counter) != entries.end());
 
 		isModified = true;
 
@@ -201,7 +216,7 @@ namespace igx {
 			++ind;
 		}
 
-		indices[counter] = { type, i };
+		entries[counter] = { i, 0, type };
 		obj.markedForUpdate[i] = true;
 		obj.toIndex[i] = counter;
 
@@ -219,21 +234,21 @@ namespace igx {
 
 		auto it = find(index);
 
-		if (it == indices.end())
+		if (it == entries.end())
 			return false;
 
-		if (it->second.first != type) {
+		if (it->second.type != type) {
 			oic::System::log()->error("SceneGraph::update<T> called with incompatible types");
 			return false;
 		}
 
 		Object &obj = objects[u8(type)];
-		u8 *target = obj.cpuData.data() + it->second.second * sizeof(T);
+		u8 *target = obj.cpuData.data() + it->second.index * sizeof(T);
 
 		if (std::memcmp(&object, target, sizeof(T)) == 0)
 			return true;
 
-		obj.markedForUpdate[it->second.second] = true;
+		obj.markedForUpdate[it->second.index] = true;
 		std::memcpy(target, &object, sizeof(T));
 
 		return true;

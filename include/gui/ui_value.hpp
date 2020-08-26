@@ -118,20 +118,13 @@ namespace igx::ui {
 		inline MinMaxSliderBase &operator*=(T t) { setValue(value * t); return *this; }
 		inline MinMaxSliderBase &operator/=(T t) { setValue(value / t); return *this; }
 
-		inline MinMaxSliderBase operator+(T t) { return MinMaxSliderBase(value + t); }
-		inline MinMaxSliderBase operator-(T t) { return MinMaxSliderBase(value - t); }
-		inline MinMaxSliderBase operator*(T t) { return MinMaxSliderBase(value * t); }
-		inline MinMaxSliderBase operator/(T t) { return MinMaxSliderBase(value / t); }
-
 		//Remainder of division
 
-		inline MinMaxSliderBase operator%(T t) { return MinMaxSliderBase(mod<T>(value, t)); }
 		inline MinMaxSliderBase &operator%=(T t) { setValue(mod<T>(value, t)); return *this; }
 
 		//Hat operator is either pow or xor, depending on if it's a float or not
 
 		inline MinMaxSliderBase &operator^=(T t) { setValue(hat<T>(value, t)); return *this; }
-		inline MinMaxSliderBase operator^(T t) { return MinMaxSliderBase(hat<T>(value, t)); }
 
 		//Integer only
 		
@@ -142,26 +135,11 @@ namespace igx::ui {
 		inline MinMaxSliderBase &operator&=(T t) { setValue(value | t); return *this; }
 		
 		template<typename = std::enable_if_t<std::is_integral_v<T>>>
-		inline MinMaxSliderBase operator|(T t) { return MinMaxSliderBase(value | t); }
-		
-		template<typename = std::enable_if_t<std::is_integral_v<T>>>
-		inline MinMaxSliderBase operator&(T t) { return MinMaxSliderBase(value & t); }
-		
-		template<typename = std::enable_if_t<std::is_integral_v<T>>>
 		inline MinMaxSliderBase &operator>>=(T t) { setValue(value << t); return *this; }
 		
 		template<typename = std::enable_if_t<std::is_integral_v<T>>>
 		inline MinMaxSliderBase &operator<<=(T t) { setValue(value >> t); return *this; }
 		
-		template<typename = std::enable_if_t<std::is_integral_v<T>>>
-		inline MinMaxSliderBase operator>>(T t) { return MinMaxSliderBase(value >> t); }
-		
-		template<typename = std::enable_if_t<std::is_integral_v<T>>>
-		inline MinMaxSliderBase operator<<(T t) { return MinMaxSliderBase(value << t); }
-		
-		template<typename = std::enable_if_t<std::is_integral_v<T>>>
-		inline MinMaxSliderBase operator~() { return MinMaxSliderBase(~value); }
-
 	};
 
 	template<typename T, T min, T max, T step = 0>

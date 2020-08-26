@@ -154,6 +154,12 @@ namespace igx {
 				add(arg...);
 		}
 
+		template<typename T>
+		inline T *get(usz i) const {
+			static_assert(std::is_base_of_v<RenderTask, T>, "RenderTasks::get<T>(i) requires T to be a RenderTask");
+			return dynamic_cast<T*>(operator[](i));
+		}
+
 		void resize(const Vec2u32 &target);
 
 		void prepareCommandList(CommandList *cl);

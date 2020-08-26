@@ -1,6 +1,8 @@
 #pragma once
 #include "types/vec.hpp"
 #include "types/enum.hpp"
+#include "utils/inflect.hpp"
+#include "gui/ui_value.hpp"
 
 namespace igx {
 
@@ -13,7 +15,6 @@ namespace igx {
 		ProjectionType, u32, 
 		Default, 
 		Omnidirectional,
-		Equirect,
 		Stereoscopic_omnidirectional_TB,
 		Stereoscopic_TB,
 		Stereoscopic_omnidirectional_LR,
@@ -29,17 +30,30 @@ namespace igx {
 		u32 height;
 
 		Vec3f32 p1;
-		f32 ipd = 6.2f;
+		ui::Slider<f32, 50.f, 80.f> ipd = 62;
 
 		Vec3f32 p2;
 		ProjectionType projectionType;
 
 		Vec3f32 skyboxColor = Vec3f32(0.25f, 0.5f, 1.f);
-		f32 exposure = 1.f;
+		ui::Slider<f32, 0.1f, 4.f> exposure = 1.f;
+
+		Vec3f32 p3;
+		f32 focalDistance = 10.f;
+
+		Vec3f32 p4;
+		f32 aperature = 0.1f;
+
+		Vec3f32 p5;
+		u32 pad0{};
 
 		Vec2f32 invRes;
-		f32 focalDistance = 10.f;
-		f32 aperature = 0.1f;
+		Vec2u32 tiles;
+
+		InflectWithName(
+			{ "Projection type", "Eye", "IPD (mm)", "Skybox color", "Exposure", "Focal distance", "Aperature" },
+			projectionType, eye, ipd, skyboxColor, exposure, focalDistance, aperature
+		);
 
 	};
 
@@ -63,13 +77,11 @@ namespace igx {
 
 	static constexpr inline Vec2u32 encodeNormal(Vec3f32 n) {
 
-		n = n * 0.5 + 0.5;
-
-		Vec3u32 multi = (n * (Vec3f32(1 << 22, 1 << 22, 1 << 20) - 1)).cast<Vec3u32>();
+		Vec3f32 nn = (n.normalize() * 0.5 + 0.5) * u16_MAX;
 
 		return Vec2u32(
-			(multi.x << 10) | (multi.y >> 12),
-			(multi.y << 20) | multi.z
+			u32(nn.x) << 16 | u32(nn.y),
+			nn.z
 		);
 	}
 
@@ -81,16 +93,16 @@ namespace igx {
 
 		Vec2u32 dir;
 		f16 r, g, b;
-		LightType lightType;
+		LightType type;
 
 		Light(Vec3f32 dir, Vec3f32 color) :
-			lightType(LightType::Directional),
+			type(LightType::Directional),
 			r(color.x), g(color.y), b(color.z),
 			dir(encodeNormal(dir))
 		{}
 
 		Light(Vec3f32 pos, Vec3f32 color, f32 rad, f32 origin) :
-			lightType(LightType::Point),
+			type(LightType::Point),
 			r(color.x), g(color.y), b(color.z),
 			pos(pos), rad(rad), origin(origin)
 		{}
