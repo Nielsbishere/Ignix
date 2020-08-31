@@ -45,7 +45,7 @@ namespace igx {
 		f32 aperature = 0.1f;
 
 		Vec3f32 p5;
-		u32 pad0{};
+		bool useUI = true; u8 pad[3]{};
 
 		Vec2f32 invRes;
 		Vec2u32 tiles;

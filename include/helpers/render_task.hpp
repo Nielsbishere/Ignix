@@ -59,23 +59,30 @@ namespace igx {
 
 	class TextureRenderTask : public RenderTask {
 
-		Texture::Info info;
-		TextureRef texture;
-
-		String name;
+		List<Texture::Info> infos;
+		List<TextureRef> textures;
+		List<String> names;
 
 	public:
 
 		TextureRenderTask(Graphics &g, const Texture::Info &info, const String &name) :
-			RenderTask(g), info(info), name(name)
+			RenderTask(g), infos{ info }, names{ name }, textures(1)
 		{
 			oicAssert("Only supporting one mip", info.mips == 1);
 		}
 
+		template<typename ...args>
+		TextureRenderTask(Graphics &g, const List<String> &names, const Texture::Info &info, const args &...arg) :
+			RenderTask(g), infos{ info, arg... }, names(names), textures(1 + sizeof...(arg))
+		{
+			for(auto &inf : infos)
+				oicAssert("Only supporting one mip", inf.mips == 1);
+		}
+
 		virtual void resize(const Vec2u32&) override;
 
-		inline const Texture::Info &getInfo() const { return info; }
-		inline Texture *getTexture() const { return texture; }
+		inline const Texture::Info &getInfo(usz i = 0) const { return infos[i]; }
+		inline Texture *getTexture(u32 i = 0) const { return textures[i]; }
 	};
 
 	class GraphicsRenderTask : public RenderTask {

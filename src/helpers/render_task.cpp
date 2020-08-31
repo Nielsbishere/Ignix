@@ -10,22 +10,30 @@ namespace igx {
 	void TextureRenderTask::resize(const Vec2u32 &size) {
 
 		RenderTask::resize(size);
-		texture.release();
 
-		info.dimensions = Vec3u16(u16(size.x), u16(size.y), 1);
-		info.mipSizes = { info.dimensions };
+		for(usz i = 0; i < textures.size(); ++i) {
 
-		if (HasFlags(info.usage, GPUMemoryUsage::CPU_WRITE)) {
+			auto &info = infos[i];
+			auto &texture = textures[i];
 
-			info.pending = { { 0, info.dimensions } };
-			info.markedPending = false;
+			texture.release();
 
-			info.initData[0].resize(
-				info.dimensions.prod<usz>() * FormatHelper::getSizeBytes(info.format)
-			);
+			info.dimensions = Vec3u16(u16(size.x), u16(size.y), 1);
+			info.mipSizes = { info.dimensions };
+
+			if (HasFlags(info.usage, GPUMemoryUsage::CPU_WRITE)) {
+
+				info.pending = { { 0, info.dimensions } };
+				info.markedPending = false;
+
+				info.initData[0].resize(
+					info.dimensions.prod<usz>() * FormatHelper::getSizeBytes(info.format)
+				);
+			}
+
+			texture = { g, names[i], info };
+
 		}
-
-		texture = { g, name, info };
 	}
 
 	void GPUBufferRenderTask::resize(const Vec2u32 &size) {
