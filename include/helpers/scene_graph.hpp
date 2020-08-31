@@ -139,15 +139,27 @@ namespace igx {
 
 		void del(const List<u64> &ids);
 
+		//Add non geometry objects
 		//Returns an object id; which will keep incrementing
 		//This is not the local array index, but rather an identifier that maps to a local index
 		//The local object can be moved in memory once previous are moved
 		//Returns 0 if it's invalid
 		template<typename T>
-		inline u64 add(const T &object);
+		inline u64 addNonGeometry(const T &object);
 
-		template<typename T, typename ...args>
-		inline void add(const T &object, const args &...arg);
+		//Add geometry objects (with certain materials)
+		//Returns an object id; which will keep incrementing
+		//This is not the local array index, but rather an identifier that maps to a local index
+		//The local object can be moved in memory once previous are moved
+		//Returns 0 if it's invalid
+		template<typename T>
+		inline u64 addGeometry(const T &object, const u32 material);
+
+		template<typename T, typename T2, typename ...args>
+		inline void add(const T &obj0, const T2 &obj1, const args &...arg);
+
+		template<typename T>
+		inline void add(const T &object);
 
 		inline auto find(u64 index) const { return entries.find(index); }
 		inline bool exists(u64 index) const { return find(index) != entries.end(); }
@@ -178,6 +190,8 @@ namespace igx {
 
 	private:
 
+		u64 addInternal(SceneObjectType type, const void *obj, usz siz, u32 material);
+
 		//Ensure no gaps are between objects
 		void compact(SceneObjectType type);
 
@@ -186,43 +200,27 @@ namespace igx {
 	//Implementations
 
 	template<typename T>
-	inline u64 SceneGraph::add(const T &object) {
+	inline u64 SceneGraph::addNonGeometry(const T &object) {
 
 		static constexpr SceneObjectType type = SceneObjectType_t<T>;
 
 		static_assert(type != SceneObjectType::COUNT, "Invalid argument passed to SceneGraph::add<T>, expecting a scene object such as Light, Triangle, Cube, etc.");
 
-		do {
-			++counter;
-		}
-		while(!counter || entries.find(counter) != entries.end());
+		static_assert(!SceneObjectTypeIsGeometry<T>, "Geometry requires Pair<T geometryType, u32 material> in SceneGraph::add");
 
-		isModified = true;
+		return addInternal(type, &object, sizeof(T), 0);
+	}
 
-		u32 &ind = info->objectCount[u8(type)];
-		Object &obj = objects[u8(type)];
+	template<typename T>
+	inline u64 SceneGraph::addGeometry(const T &object, const u32 material) {
 
-		u32 i = 0;
+		static constexpr SceneObjectType type = SceneObjectType_t<T>;
 
-		for (; i < ind; ++i)
-			if (!obj.toIndex[i])
-				break;
+		static_assert(type != SceneObjectType::COUNT, "Invalid argument passed to SceneGraph::add<T>, expecting a scene object such as Light, Triangle, Cube, etc.");
 
-		if (i == ind) {
+		static_assert(SceneObjectTypeIsGeometry<T>, "Geometry is only allowed with Pair<T, u32> in SceneGraph::add");
 
-			if (info->objectCount[u8(type)] == limits.objectCount[u8(type)])
-				return 0;
-
-			++ind;
-		}
-
-		entries[counter] = { i, 0, type };
-		obj.markedForUpdate[i] = true;
-		obj.toIndex[i] = counter;
-
-		std::memcpy(obj.cpuData.data() + sizeof(T) * i, &object, sizeof(T));
-
-		return counter;
+		return addInternal(type, &object, sizeof(T), material);
 	}
 
 	template<typename T>
@@ -254,14 +252,28 @@ namespace igx {
 		return true;
 	}
 
-	template<typename T, typename ...args>
-	inline void SceneGraph::add(const T &object, const args &...arg) {
+	template<typename T, typename T2, typename ...args>
+	inline void SceneGraph::add(const T &obj0, const T2 &obj1, const args &...arg) {
 
-		add(object);
+		if constexpr (SceneObjectTypeIsGeometry<T>) {
 
-		if constexpr (sizeof...(args) > 0)
-			add(arg...);
+			static_assert(std::is_same_v<T2, u32>, "Geometry requires a u32 material right after it");
 
+			addGeometry(obj0, obj1);
+
+			if constexpr (sizeof...(args) > 0)
+				add(arg...);
+		}
+
+		else {
+			addNonGeometry(obj0);
+			add(obj1, arg...);
+		}
+	}
+
+	template<typename T>
+	inline void SceneGraph::add(const T &obj) {
+		addNonGeometry(obj);
 	}
 
 }

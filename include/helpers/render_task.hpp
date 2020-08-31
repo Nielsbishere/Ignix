@@ -188,6 +188,10 @@ namespace igx {
 		ParentTextureRenderTask(Graphics &g, const Texture::Info &info, const String &name) :
 			TextureRenderTask(g, info, name) {}
 
+		template<typename ...args>
+		ParentTextureRenderTask(Graphics &g, const List<String> &names, const Texture::Info &inf0, const args &...arg) :
+			TextureRenderTask(g, names, inf0, arg...) {}
+
 		void resize(const Vec2u32 &target) override;
 
 		bool needsCommandUpdate() const;

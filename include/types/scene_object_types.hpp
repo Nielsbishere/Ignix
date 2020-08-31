@@ -21,6 +21,14 @@ namespace igx {
 		Stereoscopic_LR
 	);
 
+	enum class CameraFlags : u32 {
+		NONE = 0,
+		USE_UI = 1 << 0,
+		USE_SUPERSAMPLING = 1 << 1
+	};
+
+	enumFlagOverloads(CameraFlags);
+
 	struct Camera {
 
 		Vec3f32 eye{ 4, 2, -2 };
@@ -45,7 +53,7 @@ namespace igx {
 		f32 aperature = 0.1f;
 
 		Vec3f32 p5;
-		bool useUI = true; u8 pad[3]{};
+		CameraFlags flags = CameraFlags::USE_UI;
 
 		Vec2f32 invRes;
 		Vec2u32 tiles;
@@ -111,8 +119,8 @@ namespace igx {
 
 	struct Material {
 
-		f16 albedoR, albedoG, albedoB, metallic;
-		f16 ambientR, ambientG, ambientB, roughness;
+		f16 albedoR, albedoG, albedoB; u16 metallic;
+		f16 ambientR, ambientG, ambientB; u16 roughness;
 
 		f16 emissionR, emissionG, emissionB, pad2;
 		f32 transparency;
@@ -128,7 +136,8 @@ namespace igx {
 			albedoR(albedo.x), albedoG(albedo.y), albedoB(albedo.z),
 			ambientR(ambient.x), ambientG(ambient.y), ambientB(ambient.z),
 			emissionR(emission.x), emissionG(emission.y), emissionB(emission.z),
-			metallic(metallic), roughness(roughness), transparency(transparency)
+			metallic(u16(metallic * u16_MAX)), roughness(u16(roughness * u16_MAX)), 
+			transparency(transparency)
 		{}
 
 	};

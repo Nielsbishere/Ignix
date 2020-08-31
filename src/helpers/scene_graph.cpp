@@ -277,6 +277,41 @@ namespace igx {
 
 	}
 
+	u64 SceneGraph::addInternal(SceneObjectType t, const void *v, usz siz, u32 mat) {
+
+		do {
+			++counter;
+		}
+		while(!counter || entries.find(counter) != entries.end());
+
+		isModified = true;
+
+		u32 &ind = info->objectCount[u8(t)];
+		Object &obj = objects[u8(t)];
+
+		u32 i = 0;
+
+		for (; i < ind; ++i)
+			if (!obj.toIndex[i])
+				break;
+
+		if (i == ind) {
+
+			if (info->objectCount[u8(t)] == limits.objectCount[u8(t)])
+				return 0;
+
+			++ind;
+		}
+
+		entries[counter] = { i, mat, t };
+		obj.markedForUpdate[i] = true;
+		obj.toIndex[i] = counter;
+
+		std::memcpy(obj.cpuData.data() + siz * i, v, siz);
+
+		return counter;
+	}
+
 	void SceneGraph::compact(SceneObjectType type) {
 
 		u32 j{};
