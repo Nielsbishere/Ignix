@@ -83,6 +83,7 @@ namespace igx {
 
 		inline const Texture::Info &getInfo(usz i = 0) const { return infos[i]; }
 		inline Texture *getTexture(u32 i = 0) const { return textures[i]; }
+		inline const String &getName(u32 i = 0) const { return names[i]; }
 	};
 
 	class GraphicsRenderTask : public RenderTask {

@@ -103,10 +103,10 @@ namespace igx {
 		f16 r, g, b;
 		LightType type;
 
-		Light(Vec3f32 dir, Vec3f32 color) :
+		Light(Vec3f32 dir, Vec3f32 color, f32 angularExtent = 0.533_deg) :
 			type(LightType::Directional),
 			r(color.x), g(color.y), b(color.z),
-			dir(encodeNormal(dir))
+			dir(encodeNormal(dir)), rad(angularExtent)
 		{}
 
 		Light(Vec3f32 pos, Vec3f32 color, f32 rad, f32 origin) :

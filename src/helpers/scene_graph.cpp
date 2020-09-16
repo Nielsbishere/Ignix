@@ -89,7 +89,7 @@ namespace igx {
 
 		materialByObject = (u32*) materialIndices->getBuffer();
 
-		linear = factory.get(NAME("Linear sampler"), Sampler::Info(
+		linear = factory.get(NAME("Linear clampborder sampler"), Sampler::Info(
 			SamplerMin::LINEAR, SamplerMag::LINEAR, SamplerMode::CLAMP_BORDER, 1.f
 		));
 

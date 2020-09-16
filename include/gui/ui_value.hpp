@@ -163,8 +163,8 @@ namespace igx::ui {
 		inline operator T() const { return value; }
 		inline operator T&() { return value; }
 
-		inline T operator->() const { return value; }
-		inline T operator->() { return value; }
+		inline const T *operator->() const { return &value; }
+		inline T *operator->() { return &value; }
 
 	};
 
