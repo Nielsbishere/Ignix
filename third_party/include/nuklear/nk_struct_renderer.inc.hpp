@@ -644,7 +644,7 @@ namespace igx::ui {
 		//TODO: Scrollbar
 
 		f32 lineHeight = isInlineEditable ? 20.f : 15.f;
-		nk_layout_row_dynamic(data->ctx, isInlineEditable ? lineHeight * (count + 1) : 200, 1);
+		nk_layout_row_dynamic(data->ctx, isInlineEditable ? lineHeight * (count + 1) : 300, 1);
 
 		//Get nk_list_view from temporary data
 

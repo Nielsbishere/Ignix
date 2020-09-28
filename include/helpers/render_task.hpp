@@ -26,13 +26,18 @@ namespace igx {
 
 	private:
 
-		Vec2u32 currentSize;
+		String name;
 
+		Vec4f32 debugColor;
+
+		Vec2u32 currentSize;
 		bool needsCmdUpdate = true;
 
 	public:
 
-		RenderTask(Graphics &g): g(g){}
+		RenderTask(Graphics &g, const String &name, const Vec4f32 &debugColor = Vec4f32(0, 1, 0, 1)): 
+			g(g), name(name), debugColor(debugColor) {}
+
 		virtual ~RenderTask() {}
 
 		RenderTask(const RenderTask&) = delete;
@@ -40,13 +45,15 @@ namespace igx {
 		RenderTask &operator=(const RenderTask&) = delete;
 		RenderTask &operator=(RenderTask&&) = delete;
 
-		virtual void resize(const Vec2u32 &target);
+		void endCommandList(CommandList *cl);
+		void startCommandList(CommandList *cl);
 
 		virtual void prepareCommandList(CommandList *cl) = 0;
+
 		virtual void update(f64 dt) = 0;
+		virtual void resize(const Vec2u32 &target);
 
 		virtual void switchToScene(SceneGraph *sceneGraph) = 0;
-
 		virtual void prepareMode(RenderMode) {}
 
 		const Vec2u32 &size() const { return currentSize; }
@@ -65,15 +72,18 @@ namespace igx {
 
 	public:
 
-		TextureRenderTask(Graphics &g, const Texture::Info &info, const String &name) :
-			RenderTask(g), infos{ info }, names{ name }, textures(1)
+		TextureRenderTask(
+			Graphics &g, const Texture::Info &info, const String &name, 
+			const Vec4f32 &debugColor = Vec4f32(0, 1, 0, 1)
+		) :
+			RenderTask(g, name, debugColor), infos{ info }, names{ name }, textures(1)
 		{
 			oicAssert("Only supporting one mip", info.mips == 1);
 		}
 
 		template<typename ...args>
-		TextureRenderTask(Graphics &g, const List<String> &names, const Texture::Info &info, const args &...arg) :
-			RenderTask(g), infos{ info, arg... }, names(names), textures(1 + sizeof...(arg))
+		TextureRenderTask(Graphics &g, const String &name, const Vec4f32 &debugColor, const List<String> &names, const Texture::Info &info, const args &...arg) :
+			RenderTask(g, name, debugColor), infos{ info, arg... }, names(names), textures(1 + sizeof...(arg))
 		{
 			for(auto &inf : infos)
 				oicAssert("Only supporting one mip", inf.mips == 1);
@@ -92,8 +102,11 @@ namespace igx {
 
 	public:
 
-		GraphicsRenderTask(Graphics &g, const Framebuffer::Info &info, const String &name) :
-			RenderTask(g), framebuffer(g, name, info) {}
+		GraphicsRenderTask(
+			Graphics &g, const Framebuffer::Info &info, const String &name, 
+			const Vec4f32 &debugColor = Vec4f32(0, 1, 0, 1)
+		) :
+			RenderTask(g, name, debugColor), framebuffer(g, name, info) {}
 
 		virtual void resize(const Vec2u32&) override;
 
@@ -111,8 +124,11 @@ namespace igx {
 
 	public:
 
-		GPUBufferRenderTask(Graphics &g, const GPUBuffer::Info &info, const String &name) :
-			RenderTask(g), stride(info.size), name(name), info(info) { }
+		GPUBufferRenderTask(
+			Graphics &g, const GPUBuffer::Info &info, const String &name, 
+			const Vec4f32 &debugColor = Vec4f32(0, 1, 0, 1)
+		) :
+			RenderTask(g, name, debugColor), stride(info.size), name(name), info(info) { }
 
 		virtual void resize(const Vec2u32&) override;
 
@@ -190,8 +206,11 @@ namespace igx {
 			TextureRenderTask(g, info, name) {}
 
 		template<typename ...args>
-		ParentTextureRenderTask(Graphics &g, const List<String> &names, const Texture::Info &inf0, const args &...arg) :
-			TextureRenderTask(g, names, inf0, arg...) {}
+		ParentTextureRenderTask(
+			Graphics &g, const String &name, const Vec4f32 &debugColor, 
+			const List<String> &names, const Texture::Info &inf0, const args &...arg
+		):
+			TextureRenderTask(g, name, debugColor, names, inf0, arg...) {}
 
 		void resize(const Vec2u32 &target) override;
 

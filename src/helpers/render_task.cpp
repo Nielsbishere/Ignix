@@ -1,10 +1,29 @@
 #include "helpers/render_task.hpp"
+#include "graphics/command/commands.hpp"
 
 namespace igx {
 
 	void RenderTask::resize(const Vec2u32 &target) {
 		needsCmdUpdate = true;
 		currentSize = target;
+	}
+
+	void RenderTask::startCommandList(CommandList *cl) {
+
+		cl;
+
+		#ifndef NDEBUG
+			cl->add(DebugStartRegion(name, debugColor));
+		#endif
+	}
+
+	void RenderTask::endCommandList(CommandList *cl) {
+
+		cl;
+
+		#ifndef NDEBUG
+			cl->add(DebugEndRegion());
+		#endif
 	}
 
 	void TextureRenderTask::resize(const Vec2u32 &size) {
@@ -72,11 +91,12 @@ namespace igx {
 				break;
 			}
 
-		if (needsPrepare) {
-
-			for (RenderTask *task : renderTasks)
+		if (needsPrepare)
+			for (RenderTask *task : renderTasks) {
+				task->startCommandList(cl);
 				task->prepareCommandList(cl);
-		}
+				task->endCommandList(cl);
+			}
 	}
 
 	void RenderTasks::update(f64 dt) {

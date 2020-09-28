@@ -74,8 +74,11 @@ namespace igx {
 	};
 
 	struct Sphere {
-		Vec3f32 pos;
-		f32 rad;
+
+		Vec3f32 Position;
+		ui::Slider<f32, 0.1f, 100.f> Radius;
+
+		Inflect(Position, Radius);
 	};
 
 	struct Plane {
@@ -83,7 +86,7 @@ namespace igx {
 		f32 dist;
 	};
 
-	static constexpr inline Vec2u32 encodeNormal(Vec3f32 n) {
+	static constexpr inline Vec2u32 encodeNormal(const Vec3f32 &n) {
 
 		Vec3f32 nn = (n.normalize() * 0.5 + 0.5) * u16_MAX;
 
@@ -93,6 +96,22 @@ namespace igx {
 		);
 	}
 
+	static constexpr inline Vec3f32 decodeNormal(const Vec2u32 &e) {
+		Vec3f32 nn = Vec3f32(f32(e.x >> 16), u16(e.x), e.y) / u16_MAX;
+		return nn * 2 - 1;
+	}
+
+	static constexpr inline Vec3f32 fromPolar(const Vec2f32 &polar) {
+		auto cosPolar = polar.cos(), sinPolar = polar.sin();
+		return Vec3f32(sinPolar.x * cosPolar.y, sinPolar.x * sinPolar.y, cosPolar.x);
+	}
+
+	static constexpr inline Vec2f32 toPolar(const Vec3f32 &n) {
+		return {
+			std::acos(n.z),
+			std::atan2(-n.x, n.y) + oic::Math::PI0_5
+		};
+	}
 
 	struct Light {
 
@@ -109,11 +128,97 @@ namespace igx {
 			dir(encodeNormal(dir)), rad(angularExtent)
 		{}
 
-		Light(Vec3f32 pos, Vec3f32 color, f32 rad, f32 origin) :
+		Light(Vec3f32 pos, Vec3f32 color, f32 rad, f32 origin, f32 specularity = 1) :
 			type(LightType::Point),
 			r(color.x), g(color.y), b(color.z),
-			pos(pos), rad(rad), origin(origin)
+			pos(pos), rad(rad), origin(origin),
+			dir(*(u32*) &specularity, 0)
 		{}
+
+		InflectBody(
+
+			using ColorSlider = ui::Slider<f32, 0.f, 3.f>;
+			ColorSlider _r = r, _g = g, _b = b;
+
+			switch (type.value) {
+
+				//Directional light inspector
+
+				case LightType::Directional: {
+
+					using AngularSlider = ui::Slider<f32, 0.1_deg, 2_deg>;
+					using DirSlider = ui::Slider<f32, 0, 360>;
+
+					Vec3f32 d = decodeNormal(dir);
+					Vec2f32 thetaPhi = toPolar(d).radToDeg();
+					AngularSlider ae = rad;
+
+					static const List<String> namesOfArgs = { "Type", "Theta", "Phi", "R", "G", "B", "Angular extent" };
+
+					//Const
+
+					if constexpr(std::is_const_v<decltype(*this)>)
+						inflector.inflect(
+							this, recursion, namesOfArgs, type, 
+							(const DirSlider&) thetaPhi.x, 
+							(const DirSlider&) thetaPhi.y, 
+							(const ColorSlider&) _r, (const ColorSlider&) _g, (const ColorSlider&) _b, 
+							(const AngularSlider&) ae
+						);
+
+					//Non const
+
+					else {
+
+						inflector.inflect(
+							this, recursion, namesOfArgs, type, 
+							(DirSlider&) thetaPhi.x, (DirSlider&) thetaPhi.y, _r, _g, _b, ae
+						);	
+
+						r = _r.value; g = _g.value; b = _b.value;
+						rad = ae.value;
+						dir = encodeNormal(fromPolar(thetaPhi.degToRad()));
+					}
+
+					return;
+				}
+			}
+
+			//Point light
+
+			using RadSlider = ui::Slider<f32, 0.05f, 100.f>;
+			using LightSpecular = ui::Slider<f32, 0.25f, 64.f>;
+
+			RadSlider _rad = rad, _origin = origin;
+			
+			static const List<String> namesOfArgs = { 
+				"Type", "Position", "Radius", "Origin radius", "R", "G", "B", "Light specularity"
+			};
+
+			//Const
+
+			if constexpr(std::is_const_v<decltype(*this)>)
+				inflector.inflect(
+					this, recursion, namesOfArgs, type, pos, 
+					(const RadSlider&) _rad, (const RadSlider&) _origin, 
+					(const ColorSlider&) _r, (const ColorSlider&) _g, (const ColorSlider&) _b,
+					(const LightSpecular&) dir.x
+				);	
+
+			//Non const
+
+			else {
+
+				inflector.inflect(
+					this, recursion, namesOfArgs, type, pos, _rad, _origin, _r, _g, _b,
+					(LightSpecular&) dir.x
+				);
+
+				r = _r.value; g = _g.value; b = _b.value;
+				rad = _rad.value;
+				origin = _origin.value;
+			}
+		)
 
 	};
 

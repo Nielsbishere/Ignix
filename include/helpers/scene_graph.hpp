@@ -1,6 +1,8 @@
 #pragma once
 #include "types/scene_object_types.hpp"
 #include "factory.hpp"
+#include "gui/gui.hpp"
+#include "gui/struct_inspector.hpp"
 
 namespace igx {
 
@@ -75,6 +77,8 @@ namespace igx {
 
 	public:
 
+		struct Inspection;
+
 		struct Object {
 			GPUBufferRef buffer;
 			Buffer cpuData;
@@ -93,6 +97,7 @@ namespace igx {
 
 	private:
 
+		ui::GUI &gui;
 		FactoryContainer &factory;
 
 		Object objects[u8(SceneObjectType::COUNT)];
@@ -112,6 +117,8 @@ namespace igx {
 		u32 *materialByObject{};
 		Flags flags;
 
+		void *inspector;
+
 		bool isModified = true;
 
 	public:
@@ -123,6 +130,7 @@ namespace igx {
 		SceneGraph &operator=(SceneGraph&&) = delete;
 
 		SceneGraph(
+			ui::GUI &gui,
 			FactoryContainer &factory,
 			const String &sceneName,
 			const String &skyboxName,
@@ -135,7 +143,7 @@ namespace igx {
 			Flags flags = Flags::NONE
 		);
 
-		virtual ~SceneGraph() {}
+		virtual ~SceneGraph();
 
 		void del(const List<u64> &ids);
 

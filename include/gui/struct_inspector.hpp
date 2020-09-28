@@ -3,6 +3,7 @@
 #include "gui.hpp"
 #include "utils/inflect.hpp"
 #include "types/mat.hpp"
+#include "types/list_ref.hpp"
 
 namespace oic {
 	class FileSystem;
@@ -131,6 +132,9 @@ namespace igx::ui {
 
 		template<typename K, typename V, typename T2>
 		inline void inflect(const String &name, usz, const HashMap<K, V> &li, const T2*);
+
+		template<typename T, typename T2>
+		inline void inflect(const String &name, usz, const oic::ListRef<T> &li, const T2*);
 
 		//Sliders from base types
 
@@ -401,6 +405,32 @@ namespace igx::ui {
 		usz j = li.size();
 
 		if (void *handle = beginList(name, j, (std::is_arithmetic_v<T> || is_string_v<T>) && !isConst, &li)) {
+
+			for (usz i = 0; i < j; ++i) {
+
+				//TODO: beginElement
+
+				if constexpr(isConst)
+					inflect(std::to_string(i), recursion, (const T&) li[i], &li);
+				else
+					inflect(std::to_string(i), recursion, li[i], &li);
+
+				//TODO: endElement
+
+			}
+
+			endList(handle);
+		}
+	}
+
+	template<typename T, typename T2>
+	inline void StructRenderer::inflect(const String &name, usz recursion, const oic::ListRef<T> &li, const T2*) {
+
+		static constexpr bool isConst = li.isConst;
+
+		usz j = li.size();
+
+		if (void *handle = beginList(name, j, (std::is_arithmetic_v<T> || oic::is_string_v<T>) && !isConst, &li)) {
 
 			for (usz i = 0; i < j; ++i) {
 

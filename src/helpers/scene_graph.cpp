@@ -1,5 +1,6 @@
 #include "helpers/scene_graph.hpp"
 #include "igxi/convert.hpp"
+#include "types/list_ref.hpp"
 
 namespace igx {
 
@@ -21,7 +22,53 @@ namespace igx {
 		sizeof(Plane)
 	};
 
+	struct SceneGraph::Inspection {
+
+		GPUBufferRef lightBuffer, sphereBuffer;
+		GPUBufferRef sceneData;
+
+		Buffer &cpuLight, &cpuSphere;
+
+		Inspection(
+			const GPUBufferRef &lightBuffer, const GPUBufferRef &sphereBuffer, const GPUBufferRef &sceneData,
+			Buffer &cpuLight, Buffer &cpuSphere
+		) :
+			lightBuffer(lightBuffer), sphereBuffer(sphereBuffer), sceneData(sceneData),
+			cpuLight(cpuLight), cpuSphere(cpuSphere) {}
+
+		InflectBody(
+
+			SceneGraphInfo &sgi = *sceneData->getBuffer<SceneGraphInfo>();
+
+			static const List<String> namesOfArgs = { "Lights", "Spheres" };
+
+			if constexpr(std::is_const_v<decltype(*this)>)
+				inflector.inflect(
+					this, recursion, namesOfArgs, 
+					oic::ListRef<const Light>((const Light*) cpuLight.data(), sgi.lightCount),
+					oic::ListRef<const Sphere>((const Sphere*) cpuSphere.data(), sgi.sphereCount)
+				);
+
+			else
+				inflector.inflect(
+					this, recursion, namesOfArgs, 
+					oic::ListRef<Light>((Light*) cpuLight.data(), sgi.lightCount),
+					oic::ListRef<Sphere>((Sphere*) cpuSphere.data(), sgi.sphereCount)
+				);
+		);
+
+	};
+
+	SceneGraph::~SceneGraph() {
+
+		delete (ui::StructInspector<Inspection>*) inspector;
+		inspector = {};
+
+		gui.removeWindow(0);
+	}
+
 	SceneGraph::SceneGraph(
+		ui::GUI &gui,
 		FactoryContainer &factory,
 		const String &sceneName,
 		const String &skyboxName,
@@ -33,6 +80,7 @@ namespace igx {
 		u32 maxPlanes,
 		Flags flags
 	):
+		gui(gui),
 		factory(factory),
 		flags(flags),
 		limits {
@@ -106,16 +154,21 @@ namespace igx {
 
 		info = (SceneGraphInfo*) sceneData->getBuffer();
 
+		auto &lightBuffer = objects[u8(SceneObjectType::LIGHT)].buffer;
+		auto &sphereBuffer = objects[u8(SceneObjectType::SPHERE)].buffer;
+		auto &lightCpu = objects[u8(SceneObjectType::LIGHT)].cpuData;
+		auto &sphereCpu = objects[u8(SceneObjectType::SPHERE)].cpuData;
+
 		descriptors = {
 			factory.getGraphics(), NAME(sceneName + " descriptors"),
 			Descriptors::Info(
 				layout, 1, Descriptors::Subresources{
 					{ 1, GPUSubresource(sceneData) },
 					{ 2, GPUSubresource(objects[u8(SceneObjectType::TRIANGLE)].buffer) },
-					{ 3, GPUSubresource(objects[u8(SceneObjectType::SPHERE)].buffer) },
+					{ 3, GPUSubresource(sphereBuffer) },
 					{ 4, GPUSubresource(objects[u8(SceneObjectType::CUBE)].buffer) },
 					{ 5, GPUSubresource(objects[u8(SceneObjectType::PLANE)].buffer) },
-					{ 6, GPUSubresource(objects[u8(SceneObjectType::LIGHT)].buffer) },
+					{ 6, GPUSubresource(lightBuffer) },
 					{ 7, GPUSubresource(objects[u8(SceneObjectType::MATERIAL)].buffer) },
 					{ 8, GPUSubresource(materialIndices) },
 					{ 9, GPUSubresource(linear, skybox, TextureType::TEXTURE_2D) }
@@ -123,6 +176,13 @@ namespace igx {
 			)
 		};
 
+		inspector = new ui::StructInspector<Inspection>(Inspection(lightBuffer, sphereBuffer, sceneData, lightCpu, sphereCpu));
+
+		gui.addWindow(ui::Window(
+			"Scene graph", 0, Vec2f32(), Vec2f32(300, 400), 
+			(ui::StructInspector<Inspection>*) inspector, 
+			ui::Window::DEFAULT_SCROLL_NO_CLOSE
+		));
 	}
 
 	const List<RegisterLayout> &SceneGraph::getLayout() {
