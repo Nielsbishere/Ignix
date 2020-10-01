@@ -299,7 +299,7 @@ struct TestViewportInterface : public ViewportInterface {
 			g, NAME("Compute pipeline"),
 			Pipeline::Info(
 				Pipeline::Flag::NONE,
-				VIRTUAL_FILE("~/shaders/test.comp.spv"),
+				VIRTUAL_FILE("shaders/test.comp.spv"),
 				{},
 				computePipelineLayout,
 				Vec3u32{ 16, 16, 1 }
@@ -354,8 +354,8 @@ struct TestViewportInterface : public ViewportInterface {
 				{},
 
 				HashMap<ShaderStage, Pair<String, String>>{
-					{ ShaderStage::VERTEX, { VIRTUAL_FILE("~/shaders/test.vert.spv"), "main" } },
-					{ ShaderStage::FRAGMENT, { VIRTUAL_FILE("~/shaders/test.frag.spv"), "main" } }
+					{ ShaderStage::VERTEX, { VIRTUAL_FILE("shaders/test.vert.spv"), "main" } },
+					{ ShaderStage::FRAGMENT, { VIRTUAL_FILE("shaders/test.frag.spv"), "main" } }
 				},
 
 				pipelineLayout,

@@ -59,8 +59,8 @@ namespace igx::ui {
 
 				HashMap<String, Buffer>{},
 				HashMap<ShaderStage, Pair<String, String>>{
-					{ ShaderStage::VERTEX, { VIRTUAL_FILE("~/igx/shaders/gui.vert.spv"), "main" } },
-					{ ShaderStage::FRAGMENT, { VIRTUAL_FILE("~/igx/shaders/gui.frag.spv"), "main" } }
+					{ ShaderStage::VERTEX, { VIRTUAL_FILE("igx/shaders/gui.vert.spv"), "main" } },
+					{ ShaderStage::FRAGMENT, { VIRTUAL_FILE("igx/shaders/gui.frag.spv"), "main" } }
 				},
 
 				pipelineLayout,

@@ -304,7 +304,7 @@ namespace igx {
 
 			//Left over
 
-			if (prevMarked != usz_MAX) {
+			if (prevMarked != u32_MAX) {
 
 				std::memcpy(
 					obj.buffer->getBuffer() + stride * prevMarked,
