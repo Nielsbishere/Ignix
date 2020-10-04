@@ -66,7 +66,13 @@ namespace igx {
 	};
 
 	struct Triangle {
+
 		Vec3f32 p0, p1, p2;
+
+		inline Vec3f32 edge0() const { return p1 - p0; }
+		inline Vec3f32 edge1() const { return p2 - p0; }
+		inline Vec3f32 edge2() const { return p2 - p1; }
+
 	};
 
 	struct Cube {

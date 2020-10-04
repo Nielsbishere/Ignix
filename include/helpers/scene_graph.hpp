@@ -172,6 +172,8 @@ namespace igx {
 		inline auto find(u64 index) const { return entries.find(index); }
 		inline bool exists(u64 index) const { return find(index) != entries.end(); }
 
+		virtual void input(const oic::InputDevice*, oic::InputHandle, bool) {}
+
 		//Update an index 
 		//Returns false if invalid index
 		template<typename T>
