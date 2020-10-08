@@ -330,8 +330,10 @@ namespace igx {
 			if (it == entries.end())
 				continue;
 
-			objects[u8(it->first)].toIndex[it->second.index] = 0;
-			objects[u8(it->first)].markedForUpdate[it->second.index] = false;
+			u8 type = u8(it->second.type);
+
+			objects[type].toIndex[it->second.index] = 0;
+			objects[type].markedForUpdate[it->second.index] = false;
 			entries.erase(it);
 		}
 
