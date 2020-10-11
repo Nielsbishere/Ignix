@@ -65,9 +65,45 @@ namespace igx {
 
 	};
 
+	static inline void spheremapTransform(f16 &nx, f16 &ny, const Vec3f32 &n) {
+		Vec2f32 enc = n.xy().normalize() * std::sqrt(-n.z * 0.5f + 0.5f);
+		nx = enc.x;
+		ny = enc.y;
+	}
+
 	struct Triangle {
 
-		Vec3f32 p0, p1, p2;
+		Vec3f32 p0;
+		f16 n0x, n0y;
+
+		Vec3f32 p1;
+		f16 n1x, n1y;
+
+		Vec3f32 p2;
+		f16 n2x, n2y;
+
+		Triangle() {}
+
+		Triangle(
+			const Vec3f32 &p0, const Vec3f32 &p1, const Vec3f32 &p2,
+			const Vec3f32 &n0, const Vec3f32 &n1, const Vec3f32 &n2
+		) :
+			p0(p0), p1(p1), p2(p2)
+		{
+			spheremapTransform(n0x, n0y, n0);
+			spheremapTransform(n1x, n1y, n1);
+			spheremapTransform(n2x, n2y, n2);
+		}
+
+		Triangle(const Vec3f32 &p0, const Vec3f32 &p1, const Vec3f32 &p2):
+			p0(p0), p1(p1), p2(p2)
+		{
+			Vec3f32 n = Vec3f32((p1 - p0).normalize()).cross((p2 - p0).normalize());
+
+			spheremapTransform(n0x, n0y, n);
+			spheremapTransform(n1x, n1y, n);
+			spheremapTransform(n2x, n2y, n);
+		}
 
 		inline Vec3f32 edge0() const { return p1 - p0; }
 		inline Vec3f32 edge1() const { return p2 - p0; }
