@@ -38,7 +38,7 @@ namespace igx::ui {
 		guiDataBuffer = {
 			g, NAME("GUI info buffer"),
 			GPUBuffer::Info(
-				sizeof(GUIInfo), GPUBufferType::UNIFORM, GPUMemoryUsage::CPU_WRITE
+				sizeof(GUIInfo), GPUBufferUsage::UNIFORM, GPUMemoryUsage::CPU_WRITE
 			)
 		};
 
@@ -159,7 +159,7 @@ namespace igx::ui {
 					g, NAME("GUI monitor buffer"),
 					GPUBuffer::Info(
 						sizeof(mons[0]) * maxMonitors,
-						GPUBufferType::STRUCTURED, GPUMemoryUsage::CPU_WRITE
+						GPUBufferUsage::STORAGE, GPUMemoryUsage::CPU_WRITE
 					)
 				};
 
@@ -170,7 +170,7 @@ namespace igx::ui {
 				guiMonitorBuffer->flush(0, dataSize);
 			}
 
-			descriptors->updateDescriptor(2, { guiMonitorBuffer, 0 });
+			descriptors->updateDescriptor(2, GPUSubresource(guiMonitorBuffer, GPUBufferType::STRUCTURED));
 			descriptors->flush({ { 2, 1 } });
 
 			changedMonitors = true;

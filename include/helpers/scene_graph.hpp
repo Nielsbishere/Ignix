@@ -192,6 +192,7 @@ namespace igx {
 		inline auto &getSkybox() const { return skybox; }
 		inline auto &getDescriptors() const { return descriptors; }
 		inline auto &getBuffer(SceneObjectType type) const { return objects[u8(type)].buffer; }
+		inline auto &getSceneInfo() const { return sceneData; }
 
 		template<SceneObjectType type>
 		inline auto &getBuffer() const { return objects[u8(type)].buffer; }

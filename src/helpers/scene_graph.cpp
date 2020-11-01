@@ -117,8 +117,8 @@ namespace igx {
 				GPUBufferRef(
 					factory.getGraphics(), NAME(sceneName + sceneObjectNames[u8(type)]),
 					GPUBuffer::Info(
-						objectCount * sceneObjectStrides[u8(type)], GPUBufferType::STRUCTURED,
-						GPUMemoryUsage::CPU_WRITE
+						objectCount * sceneObjectStrides[u8(type)], GPUBufferUsage::STORAGE,
+						GPUMemoryUsage::CPU_WRITE | GPUMemoryUsage::GPU_WRITE
 					)
 				),
 				Buffer(objectCount * sceneObjectStrides[u8(type)]),
@@ -130,8 +130,8 @@ namespace igx {
 		materialIndices = {
 			factory.getGraphics(), NAME("Scene material indices"),
 			GPUBuffer::Info(
-				totalObjectCount * sizeof(u32), GPUBufferType::STRUCTURED,
-				GPUMemoryUsage::CPU_WRITE
+				totalObjectCount * sizeof(u32), GPUBufferUsage::STORAGE,
+				GPUMemoryUsage::CPU_WRITE | GPUMemoryUsage::GPU_WRITE
 			)
 		};
 
@@ -148,29 +148,30 @@ namespace igx {
 		sceneData = {
 			factory.getGraphics(), NAME("Scene data"),
 			GPUBuffer::Info(
-				sizeof(SceneGraphInfo), GPUBufferType::UNIFORM, GPUMemoryUsage::CPU_WRITE
+				sizeof(SceneGraphInfo), GPUBufferUsage::STORAGE_UNIFORM, 
+				GPUMemoryUsage::CPU_WRITE | GPUMemoryUsage::GPU_WRITE
 			)
 		};
 
 		info = (SceneGraphInfo*) sceneData->getBuffer();
 
-		auto &lightBuffer = objects[u8(SceneObjectType::LIGHT)].buffer;
-		auto &sphereBuffer = objects[u8(SceneObjectType::SPHERE)].buffer;
-		auto &lightCpu = objects[u8(SceneObjectType::LIGHT)].cpuData;
-		auto &sphereCpu = objects[u8(SceneObjectType::SPHERE)].cpuData;
+		GPUBufferRef &lightBuffer = objects[u8(SceneObjectType::LIGHT)].buffer;
+		GPUBufferRef &sphereBuffer = objects[u8(SceneObjectType::SPHERE)].buffer;
+		Buffer &lightCpu = objects[u8(SceneObjectType::LIGHT)].cpuData;
+		Buffer &sphereCpu = objects[u8(SceneObjectType::SPHERE)].cpuData;
 
 		descriptors = {
 			factory.getGraphics(), NAME(sceneName + " descriptors"),
 			Descriptors::Info(
 				layout, 1, Descriptors::Subresources{
-					{ 1, GPUSubresource(sceneData) },
-					{ 2, GPUSubresource(objects[u8(SceneObjectType::TRIANGLE)].buffer) },
-					{ 3, GPUSubresource(sphereBuffer) },
-					{ 4, GPUSubresource(objects[u8(SceneObjectType::CUBE)].buffer) },
-					{ 5, GPUSubresource(objects[u8(SceneObjectType::PLANE)].buffer) },
-					{ 6, GPUSubresource(lightBuffer) },
-					{ 7, GPUSubresource(objects[u8(SceneObjectType::MATERIAL)].buffer) },
-					{ 8, GPUSubresource(materialIndices) },
+					{ 1, GPUSubresource(sceneData, GPUBufferType::UNIFORM) },
+					{ 2, GPUSubresource(objects[u8(SceneObjectType::TRIANGLE)].buffer, GPUBufferType::STORAGE) },
+					{ 3, GPUSubresource(sphereBuffer, GPUBufferType::STORAGE) },
+					{ 4, GPUSubresource(objects[u8(SceneObjectType::CUBE)].buffer, GPUBufferType::STORAGE) },
+					{ 5, GPUSubresource(objects[u8(SceneObjectType::PLANE)].buffer, GPUBufferType::STORAGE) },
+					{ 6, GPUSubresource(lightBuffer, GPUBufferType::STORAGE) },
+					{ 7, GPUSubresource(objects[u8(SceneObjectType::MATERIAL)].buffer, GPUBufferType::STORAGE) },
+					{ 8, GPUSubresource(materialIndices, GPUBufferType::STORAGE) },
 					{ 9, GPUSubresource(linear, skybox, TextureType::TEXTURE_2D) }
 				}
 			)

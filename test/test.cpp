@@ -34,7 +34,7 @@ struct TestViewportInterface : public ViewportInterface {
 	DescriptorsRef descriptors, computeDescriptors;
 	PipelineLayoutRef pipelineLayout, computePipelineLayout;
 	PipelineRef pipeline, computePipeline;
-	ShaderBufferRef uniforms;
+	GPUBufferRef uniforms;
 	UploadBufferRef uploadBuffer;
 	TextureRef tex2D, computeOutput;
 	SamplerRef samp;
@@ -224,9 +224,9 @@ struct TestViewportInterface : public ViewportInterface {
 
 		uniforms = {
 			g, NAME("Test pipeline uniform buffer"),
-			ShaderBuffer::Info(
-				GPUBufferType::UNIFORM, GPUMemoryUsage::SHARED | GPUMemoryUsage::CPU_WRITE,
-				{ { NAME("mask"), ShaderBuffer::Layout(0, Buffer(sizeof(UniformBuffer))) } }
+			GPUBuffer::Info(
+				u64(sizeof(UniformBuffer)),
+				GPUBufferUsage::UNIFORM, GPUMemoryUsage::SHARED | GPUMemoryUsage::CPU_WRITE
 			)
 		};
 
@@ -329,7 +329,7 @@ struct TestViewportInterface : public ViewportInterface {
 		};
 
 		descriptorsInfo = Descriptors::Info(pipelineLayout, 0, {});
-		descriptorsInfo.resources[0] = GPUSubresource(uniforms, 0);
+		descriptorsInfo.resources[0] = GPUSubresource(uniforms, GPUBufferType::UNIFORM);
 
 		descriptorsInfo.resources[1] = GPUSubresource(
 			samp, computeOutput, TextureType::TEXTURE_2D
@@ -382,7 +382,7 @@ struct TestViewportInterface : public ViewportInterface {
 			FlushBuffer(mesh, uploadBuffer),
 
 			//Update uniforms
-			FlushBuffer(uniforms, nullptr),		//Tell when we want our CPU data to be copied
+			FlushBuffer(uniforms, uploadBuffer),		//Tell when we want our CPU data to be copied
 
 			//Render to compute shader
 

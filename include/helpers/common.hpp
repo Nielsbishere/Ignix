@@ -8,7 +8,6 @@
 #include "graphics/memory/swapchain.hpp"
 #include "graphics/memory/framebuffer.hpp"
 #include "graphics/memory/primitive_buffer.hpp"
-#include "graphics/memory/shader_buffer.hpp"
 #include "graphics/memory/upload_buffer.hpp"
 #include "graphics/memory/texture.hpp"
 #include "graphics/memory/render_texture.hpp"

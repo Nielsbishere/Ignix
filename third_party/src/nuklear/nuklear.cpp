@@ -100,8 +100,8 @@ namespace igx::ui {
 		};
 
 		Descriptors::Subresources resources;
-		resources[0] = { sampler, data->textureAtlas, TextureType::TEXTURE_2D };
-		resources[1] = { guiDataBuffer, 0 };
+		resources[0] = GPUSubresource(sampler, data->textureAtlas, TextureType::TEXTURE_2D);
+		resources[1] = GPUSubresource(guiDataBuffer, GPUBufferType::UNIFORM);
 
 		descriptors = {
 			g, NAME("Atlas descriptor"),
@@ -176,7 +176,7 @@ namespace igx::ui {
 				if (newSize % stride)
 					newSize = (newSize / stride + 1) * stride;
 
-				auto vboInfo = GPUBuffer::Info(newSize, GPUBufferType::VERTEX, GPUMemoryUsage::CPU_WRITE);
+				auto vboInfo = GPUBuffer::Info(newSize, GPUBufferUsage::VERTEX, GPUMemoryUsage::CPU_WRITE);
 				std::memcpy(vboInfo.initData.data(), verts.memory.ptr, verts.needed);
 
 				data->vbo = {
@@ -204,7 +204,7 @@ namespace igx::ui {
 				if (newSize % stride)
 					newSize = (newSize / stride + 1) * stride;
 
-				auto iboInfo = GPUBuffer::Info(newSize, GPUBufferType::INDEX, GPUMemoryUsage::CPU_WRITE);
+				auto iboInfo = GPUBuffer::Info(newSize, GPUBufferUsage::INDEX, GPUMemoryUsage::CPU_WRITE);
 				std::memcpy(iboInfo.initData.data(), idx.memory.ptr, idx.needed);
 
 				data->ibo = {
