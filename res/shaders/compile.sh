@@ -13,7 +13,7 @@ do
 
 	echo -- Compiling file "$i"
 
-	glslangValidator -G1.0 --target-env spirv1.0 -e main -o "$i.spv" "$i"
+	glslangValidator -G100 --target-env spirv1.0 -e main -o "$i.spv" "$i"
 
 	if [ $? -ne 0 ]; 
 	then 

@@ -38,7 +38,7 @@ namespace igx::ui {
 			if constexpr (oic::is_exposed_enum_v<T>) {
 				usz id = T::idByValue(t.value);
 				doDropdown(name, id, T::getCNames());
-				t = enum T::_E(T::values[id]);
+				t = T::_E(T::values[id]);
 			}
 
 			else if constexpr (oic::is_vector_v<T>) {
@@ -234,8 +234,8 @@ namespace igx::ui {
 		template<typename T> inline void inflect(const String &name, usz, WString &str, const T*) { doString(name, str, false); }
 		template<typename T> inline void inflect(const String &name, usz, const WString &str, const T*) { doString(name, (WString&) str, true); }
 
-		template<typename T> inline void inflect(const String &name, usz, c16 *&str, const T*) { doString(name, (c16*)str, false, wcslen(str)); }
-		template<typename T> inline void inflect(const String &name, usz, const c16 *&str, const T*) { doString(name, (c16*)str, true, wcslen(str)); }
+		template<typename T> inline void inflect(const String &name, usz, c16 *&str, const T*) { doString(name, (c16*)str, false, std::char_traits<c16>::length(str)); }
+		template<typename T> inline void inflect(const String &name, usz, const c16 *&str, const T*) { doString(name, (c16*)str, true, std::char_traits<c16>::length(str)); }
 
 		template<typename T, usz siz> 
 		inline void inflect(const String &name, usz, c16 (&str)[siz], const T*) { doString(name, (c16*)str, false, siz); }
@@ -356,9 +356,9 @@ namespace igx::ui {
 			auto inflector = StructRenderer{ data, &tempData };
 
 			if constexpr(std::is_pointer_v<T>)
-				inflector.inflect("", 0, *value, (void*)nullptr);
+				inflector.inflect("", 0, *ValueContainer<T>::value, (void*)nullptr);
 			else
-				inflector.inflect("", 0, value, (void*)nullptr);
+				inflector.inflect("", 0, ValueContainer<T>::value, (void*)nullptr);
 
 			List<const void*> toDelete;
 			toDelete.reserve(tempData.size());

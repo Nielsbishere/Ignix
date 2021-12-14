@@ -180,7 +180,7 @@ namespace igx {
 		InflectBody(
 
 			using ColorSlider = ui::Slider<f32, 0.f, 3.f>;
-			ColorSlider _r = r, _g = g, _b = b;
+			ColorSlider _r = f32(r), _g = f32(g), _b = f32(b);
 
 			switch (type.value) {
 
@@ -193,7 +193,7 @@ namespace igx {
 
 					Vec3f32 d = decodeNormal(dir);
 					Vec2f32 thetaPhi = toPolar(d).radToDeg();
-					AngularSlider ae = rad;
+					AngularSlider ae = f32(rad);
 
 					static const List<String> namesOfArgs = { "Type", "Theta", "Phi", "R", "G", "B", "Angular extent" };
 
@@ -231,7 +231,7 @@ namespace igx {
 			using RadSlider = ui::Slider<f32, 0.05f, 100.f>;
 			using LightSpecular = ui::Slider<f32, 0.25f, 64.f>;
 
-			RadSlider _rad = rad, _origin = origin;
+			RadSlider _rad = f32(rad), _origin = f32(origin);
 			
 			static const List<String> namesOfArgs = { 
 				"Type", "Position", "Radius", "Origin radius", "R", "G", "B", "Light specularity"

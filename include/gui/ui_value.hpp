@@ -243,7 +243,7 @@ namespace igx::ui {
 		EnumContainer(enum T::_E _value) : value(_value) {}
 
 		inline usz id() const {
-			return T::idByValue(enum T::_E(value));
+			return T::idByValue(T::_E(value));
 		}
 
 		inline void setId(usz id) {
